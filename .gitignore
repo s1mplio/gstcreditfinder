@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Reports and real client data (never commit taxpayer data)
+*.xlsx
+data/
+clients/
+
+# Environment / secrets
+.env
+
+# OS
+Thumbs.db
+.DS_Store
