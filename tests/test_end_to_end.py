@@ -38,7 +38,7 @@ def test_sample_demo_finds_every_situation(tmp_path, capsys):
         assert label in captured.out, label
 
     assert "invoice value is" in captured.err      # misread bill total warned
-    assert "cdnr record(s) not checked" in captured.err
+    assert "CDNR record(s)" in captured.err
 
     workbook = load_workbook(out)
     assert workbook.sheetnames == ["Summary", "Action needed", "Supplier reminders", "All invoices"]

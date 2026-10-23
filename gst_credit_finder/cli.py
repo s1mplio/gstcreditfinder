@@ -8,9 +8,9 @@ import sys
 from datetime import date
 
 from .gstr2b import load_gstr2b
-from .matcher import match
 from .register import load_register
-from .report import summarize, supplier_reminders, text_summary, write_excel
+from .report import text_summary, write_excel
+from .service import run_check
 
 
 def build_parser():
@@ -18,7 +18,7 @@ def build_parser():
         prog="gst_credit_finder",
         description="Find GST input tax credit at risk by matching purchase bills against GSTR-2B.",
     )
-    parser.add_argument("--register", required=True, help="Purchase register CSV")
+    parser.add_argument("--register", required=True, help="Purchase register (CSV or Excel)")
     parser.add_argument(
         "--gstr2b",
         required=True,
@@ -40,45 +40,33 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
 
     register = load_register(args.register)
-
-    for error in register.errors:
-        print(f"[register] skipped: {error}", file=sys.stderr)
-
-    for warning in register.warnings:
-        print(f"[register] check: {warning}", file=sys.stderr)
-
-    gstr2b_invoices = []
-    buyer_gstin = ""
-    periods = []
-
-    for path in args.gstr2b:
-        loaded = load_gstr2b(path)
-        gstr2b_invoices.extend(loaded.invoices)
-        buyer_gstin = buyer_gstin or loaded.buyer_gstin
-        periods.append(loaded.period)
-
-        for section, count in loaded.skipped.items():
-            print(f"[gstr2b] {path}: {count} {section} record(s) not checked yet", file=sys.stderr)
-
-    results = match(register.invoices, gstr2b_invoices)
-    summary = summarize(results, args.today)
-    reminders = supplier_reminders(results, args.buyer_name or "our business", buyer_gstin)
-
-    period_text = "GSTR-2B " + ", ".join(
-        f"{p[:2]}-{p[2:]}" for p in sorted(periods, key=lambda p: (p[2:], p[:2])) if p
+    outcome = run_check(
+        register,
+        [load_gstr2b(path) for path in args.gstr2b],
+        args.buyer_name,
+        args.today,
     )
 
-    print(text_summary(summary, period_text, args.today))
+    for error in outcome.register_errors:
+        print(f"[register] skipped: {error}", file=sys.stderr)
+
+    for warning in outcome.register_warnings:
+        print(f"[register] check: {warning}", file=sys.stderr)
+
+    for note in outcome.skipped:
+        print(f"[gstr2b] {note}", file=sys.stderr)
+
+    print(text_summary(outcome.summary, outcome.period_text, outcome.today))
 
     write_excel(
         args.out,
-        results,
-        summary,
-        reminders,
-        args.buyer_name or "Your business",
-        buyer_gstin,
-        period_text,
-        args.today,
+        outcome.results,
+        outcome.summary,
+        outcome.reminders,
+        outcome.buyer_name,
+        outcome.buyer_gstin,
+        outcome.period_text,
+        outcome.today,
     )
 
     print(f"\nReport saved: {args.out}")

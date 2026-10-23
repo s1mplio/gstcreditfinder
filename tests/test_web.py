@@ -1,0 +1,129 @@
+import csv
+import io
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+from openpyxl import Workbook, load_workbook
+
+from gst_credit_finder.web import app
+
+ROOT = Path(__file__).resolve().parents[1]
+SAMPLE = ROOT / "sample_data"
+
+client = TestClient(app)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def sample_data():
+    subprocess.run([sys.executable, str(SAMPLE / "generate_sample.py")], check=True)
+
+
+def gstr2b_files():
+    return [
+        ("gstr2b", (path.name, path.read_bytes(), "application/json"))
+        for path in sorted(SAMPLE.glob("gstr2b_*.json"))
+    ]
+
+
+def test_home_page_and_assets():
+    assert "Find the GST credit you" in client.get("/").text
+    assert client.get("/static/app.js").status_code == 200
+    assert client.get("/static/style.css").status_code == 200
+
+
+def test_demo_returns_results_and_downloadable_report():
+    response = client.get("/api/demo")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["total_at_risk"] > 0
+    assert {c["status"] for c in data["counts"]} >= {"matched", "missing_in_2b", "invalid_gstin"}
+    assert data["reminders"][0]["supplier_name"] == "Sharma Traders"
+    assert data["urgent"]
+
+    report = client.get(f"/api/report/{data['report_id']}")
+    assert report.status_code == 200
+    assert load_workbook(io.BytesIO(report.content)).sheetnames[0] == "Summary"
+
+
+def test_upload_csv_register():
+    response = client.post(
+        "/api/check",
+        files=[("register", ("bills.csv", (SAMPLE / "purchase_register.csv").read_bytes(), "text/csv"))]
+        + gstr2b_files(),
+        data={"buyer_name": "Test Store"},
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["buyer_name"] == "Test Store"
+    assert data["total_at_risk"] == client.get("/api/demo").json()["total_at_risk"]
+
+
+def test_upload_excel_register_with_title_row_and_other_column_names():
+    with open(SAMPLE / "purchase_register.csv", encoding="utf-8") as file:
+        rows = list(csv.reader(file))
+
+    renamed = {
+        "supplier_gstin": "GSTIN of Supplier",
+        "invoice_number": "Invoice No.",
+        "invoice_date": "Invoice Date",
+        "taxable_value": "Taxable Value",
+        "igst": "Integrated Tax",
+        "cgst": "Central Tax",
+        "sgst": "State/UT Tax",
+    }
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Purchase Register September 2026"])  # title row
+    sheet.append([renamed.get(name, name) for name in rows[0]])
+
+    for row in rows[1:]:
+        values = list(row)
+        values[4:] = [float(value) for value in values[4:]]
+        sheet.append(values)
+
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+
+    response = client.post(
+        "/api/check",
+        files=[("register", ("register.xlsx", buffer.getvalue(), "application/octet-stream"))]
+        + gstr2b_files(),
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["total_at_risk"] == client.get("/api/demo").json()["total_at_risk"]
+
+
+def test_register_missing_columns_is_a_clear_error():
+    response = client.post(
+        "/api/check",
+        files=[("register", ("bills.csv", b"name,amount\nx,1\n", "text/csv"))] + gstr2b_files(),
+    )
+    assert response.status_code == 400
+    assert "missing columns" in response.json()["detail"]
+
+
+def test_wrong_gstr2b_file_is_a_clear_error():
+    response = client.post(
+        "/api/check",
+        files=[
+            ("register", ("bills.csv", (SAMPLE / "purchase_register.csv").read_bytes(), "text/csv")),
+            ("gstr2b", ("gstr2b.pdf", b"%PDF-1.4 not json", "application/pdf")),
+        ],
+    )
+    assert response.status_code == 400
+    assert "not a GSTR-2B JSON" in response.json()["detail"]
+
+
+def test_expired_report_and_template():
+    assert client.get("/api/report/does-not-exist").status_code == 404
+
+    template = client.get("/api/template")
+    assert template.status_code == 200
+    assert template.text.startswith("supplier_gstin,")

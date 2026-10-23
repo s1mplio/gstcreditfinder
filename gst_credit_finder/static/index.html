@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GST Credit Finder</title>
+  <meta name="description" content="Find the GST input tax credit you're losing because suppliers didn't file. Upload bills and GSTR-2B, get results in a minute.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f766e'/><text x='16' y='22' font-size='17' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'>₹</text></svg>">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">₹</span>
+        GST Credit Finder
+      </a>
+      <button class="link-button" id="demo-top" type="button">See a demo</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- ================= HERO + UPLOAD ================= -->
+    <section id="start">
+      <div class="hero">
+        <h1>Find the GST credit you're losing</h1>
+        <p>When suppliers file late, file wrong amounts, or don't file at all, your input tax credit silently disappears. Upload your purchase bills and GSTR-2B to see exactly how much, and who to chase.</p>
+      </div>
+
+      <form class="card upload" id="upload-form">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-body">
+            <label for="register">Purchase register</label>
+            <p class="hint">Your purchase bills as CSV or Excel. <a href="/api/template" download>Download the template</a></p>
+            <input id="register" name="register" type="file" accept=".csv,.xlsx,.xlsm" required>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-body">
+            <label for="gstr2b">GSTR-2B (JSON from the GST portal)</label>
+            <p class="hint">GST portal &rarr; Returns &rarr; GSTR-2B &rarr; download JSON. Add the next months too, to catch suppliers who filed late.</p>
+            <input id="gstr2b" name="gstr2b" type="file" accept=".json" multiple required>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-body">
+            <label for="buyer_name">Your business name <span class="optional">(optional)</span></label>
+            <p class="hint">Used in the reminder messages to suppliers.</p>
+            <input id="buyer_name" name="buyer_name" type="text" maxlength="120" placeholder="e.g. Shree Ganesh Kirana Stores">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="button primary" id="check-button" type="submit">Check my credit</button>
+          <button class="button secondary" id="demo-button" type="button">Try with sample data</button>
+        </div>
+
+        <p class="privacy">🔒 Files are processed in memory and are not stored.</p>
+        <p class="error" id="form-error" hidden></p>
+      </form>
+    </section>
+
+    <!-- ================= LOADING ================= -->
+    <section id="loading" class="card loading" hidden>
+      <div class="spinner"></div>
+      <p>Matching your bills against GSTR-2B&hellip;</p>
+    </section>
+
+    <!-- ================= RESULTS ================= -->
+    <section id="results" hidden>
+      <div class="results-header">
+        <button class="link-button" id="new-check" type="button">&larr; New check</button>
+        <span class="muted" id="result-meta"></span>
+      </div>
+
+      <div class="card headline">
+        <div>
+          <p class="headline-label">GST credit at risk</p>
+          <p class="headline-amount" id="total-at-risk"></p>
+          <p class="muted" id="claimable"></p>
+        </div>
+        <a class="button primary" id="download" href="#" download>Download Excel report</a>
+      </div>
+
+      <div class="alert urgent" id="urgent" hidden></div>
+
+      <div id="notices"></div>
+
+      <h2>Summary</h2>
+      <div class="chips" id="chips"></div>
+
+      <div id="reminders-section" hidden>
+        <h2>Suppliers to chase</h2>
+        <p class="hint">Send each supplier a ready-made message asking them to file or correct their GST return.</p>
+        <div class="reminders" id="reminders"></div>
+      </div>
+
+      <h2 id="list-title">Problems to fix</h2>
+      <div class="filters">
+        <label class="toggle"><input type="checkbox" id="show-all"> Show matched invoices too</label>
+      </div>
+      <div class="results-list" id="results-list"></div>
+
+      <p class="disclaimer">This report checks your data against GSTR-2B. It is not tax advice; confirm credit decisions with your Chartered Accountant.</p>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    GST Credit Finder &middot; Matching is done by exact rules, not guesses.
+  </footer>
+
+  <template id="result-template">
+    <article class="result">
+      <div class="result-top">
+        <span class="badge"></span>
+        <span class="result-amount"></span>
+      </div>
+      <p class="result-supplier"></p>
+      <p class="result-invoice muted"></p>
+      <p class="result-action"></p>
+      <ul class="result-notes"></ul>
+    </article>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

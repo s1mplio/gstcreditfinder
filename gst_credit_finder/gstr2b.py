@@ -9,6 +9,7 @@ a real download, since the portal format can change.
 """
 
 import json
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Dict, List
 
@@ -77,18 +78,33 @@ def _invoice(supplier: dict, record: dict, period: str, origin: str) -> Invoice:
 
 
 def load_gstr2b(path) -> Gstr2bLoad:
-    with open(path, encoding="utf-8-sig") as file:
-        raw = json.load(file)
+    return load_gstr2b_bytes(Path(path).read_bytes(), str(path))
+
+
+def load_gstr2b_bytes(content: bytes, filename: str) -> Gstr2bLoad:
+    origin = str(filename).replace("\\", "/").split("/")[-1]
+
+    try:
+        raw = json.loads(content.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise ValueError(
+            f"{origin} is not a GSTR-2B JSON file. Download GSTR-2B from the "
+            "GST portal as JSON (not PDF or Excel)."
+        )
+
+    if not isinstance(raw, dict):
+        raise ValueError(f"{origin} is not a GSTR-2B JSON file.")
 
     data = raw.get("data", raw)
     docs = data.get("docdata", data)
+
+    if not isinstance(docs, dict) or not any(key in docs for key in ("b2b", "b2ba", "cdnr")):
+        raise ValueError(f"{origin} doesn't contain GSTR-2B invoice data (b2b section).")
 
     result = Gstr2bLoad(
         buyer_gstin=clean_gstin(data.get("gstin")),
         period=str(data.get("rtnprd", "")),
     )
-
-    origin = str(path).replace("\\", "/").split("/")[-1]
 
     invoices = {}
 

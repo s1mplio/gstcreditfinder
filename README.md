@@ -28,7 +28,7 @@ URGENT: 1 item(s) within 60 days of the claim deadline
 
 ---
 
-## Quick start
+## Quick start: website
 
 ```powershell
 cd C:\GSTCreditFinder
@@ -36,6 +36,24 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
+python sample_data\generate_sample.py   # demo data
+python run_web.py
+```
+
+Open **http://localhost:8080**:
+
+1. Upload the **purchase register** (CSV or Excel; common column names such as "GSTIN of Supplier" or "Invoice No." are recognised, and title rows above the header are skipped).
+2. Upload one or more **GSTR-2B JSON** files.
+3. See the **credit at risk**, the problems to fix, and a ready message per supplier with **Send on WhatsApp** / **Copy**.
+4. **Download the Excel report** for your CA.
+
+**Try with sample data** runs the whole flow on fictional data, which is useful for demos. Uploaded files are processed in memory and never written to disk; reports stay downloadable for one hour.
+
+Set `HOST=0.0.0.0` to open it from other devices on your network, and `PORT` to change the port.
+
+## Quick start: command line
+
+```powershell
 # Create the demo data, then run the check
 python sample_data\generate_sample.py
 python -m gst_credit_finder `
@@ -116,10 +134,14 @@ gst_credit_finder/
 ├── matcher.py          # Three-pass matching and result statuses
 ├── deadlines.py        # ITC claim deadline (Section 16(4))
 ├── report.py           # Summary, supplier reminders, Excel report
+├── service.py          # One check, shared by website and command line
+├── web.py              # Website (FastAPI)
+├── static/             # Web page: index.html, app.js, style.css
 └── cli.py              # Command line
 sample_data/
 └── generate_sample.py  # Fictional demo data covering every situation
-tests/                  # 28 tests
+tests/                  # 35 tests
+run_web.py              # Starts the website
 ```
 
 ---
@@ -127,7 +149,7 @@ tests/                  # 28 tests
 ## Roadmap
 
 1. **AI bill reading:** photograph or upload supplier bills, extract the register automatically, and flag anything unclear for review.
-2. **Web app** for shopkeepers and CA firms: upload, results, one-tap WhatsApp reminders to suppliers.
+2. **Accounts and saved history** for shopkeepers and CA firms.
 3. **Multi-client view for CAs:** credit at risk across all clients.
 4. **More GSTR-2B sections:** credit/debit notes, imports, ISD.
 5. **Invoice Management System (IMS)** accept/reject guidance.
