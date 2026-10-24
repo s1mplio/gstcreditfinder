@@ -175,7 +175,9 @@ def connect():
         if psycopg is None:
             raise RuntimeError("DATABASE_URL is set but psycopg isn't installed (pip install psycopg[binary]).")
 
-        raw = psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=10)
+        # No server-side prepared statements: hosted Postgres usually sits
+        # behind a connection pooler (Neon's PgBouncer) that can't keep them.
+        raw = psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=10, prepare_threshold=None)
 
         with _ready_lock:
             if DATABASE_URL not in _ready:

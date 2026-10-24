@@ -5,3 +5,8 @@ tests/
 *.db
 __pycache__/
 .pytest_cache/
+.agents/
+.claude/
+skills-lock.json
+.env*
+.vercel/
