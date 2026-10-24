@@ -41,10 +41,13 @@
   <!-- ================= NAVIGATION ================= -->
   <header class="nav">
     <div class="wrap nav-inner">
-      <a class="brand" href="/">
-        <span class="brand-mark">₹</span>
-        <span>GST Credit Finder</span>
-      </a>
+      <div class="nav-left">
+        <a class="brand" href="/">
+          <span class="brand-mark">₹</span>
+          <span class="brand-name">GST Credit Finder</span>
+        </a>
+        <span class="nav-title" id="nav-title"></span>
+      </div>
 
       <nav class="nav-public" id="nav-public">
         <a class="nav-link hide-mobile" href="#how">How it works</a>
@@ -79,7 +82,7 @@
           <div class="hero-copy">
             <span class="eyebrow">For shopkeepers and Chartered Accountants</span>
             <h1>Find the GST credit you're losing, and get it back.</h1>
-            <p class="lead">When suppliers file late, file the wrong amount, or don't file at all, your input tax credit quietly disappears. Match your purchase bills against GSTR-2B in a minute and see exactly who to chase.</p>
+            <p class="lead">When suppliers file late, file the wrong amount or don't file at all, your input tax credit quietly disappears. See exactly how much, and which supplier to chase.</p>
             <div class="hero-actions">
               <button class="button primary large" id="hero-signup" type="button">Create free account</button>
               <a class="button ghost-light large" href="#how">
@@ -405,7 +408,19 @@
           </div>
         </div>
 
-        <div class="card bills-card" id="bills-card">
+        <div class="segmented" role="tablist" aria-label="Business sections">
+          <button class="segment" type="button" role="tab" data-tab="bills">
+            <svg class="icon"><use href="#i-file"/></svg> Bills
+          </button>
+          <button class="segment" type="button" role="tab" data-tab="check">
+            <svg class="icon"><use href="#i-search"/></svg> Check
+          </button>
+          <button class="segment" type="button" role="tab" data-tab="history">
+            <svg class="icon"><use href="#i-clock"/></svg> History
+          </button>
+        </div>
+
+        <div class="card bills-card" id="bills-card" data-pane="bills">
           <div class="card-head">
             <div>
               <h2 class="card-title">Purchase bills</h2>
@@ -482,7 +497,7 @@
           <div class="bills-table" id="bills-list"></div>
         </div>
 
-        <form class="card upload" id="upload-form">
+        <form class="card upload" id="upload-form" data-pane="check">
           <div class="card-head">
             <div>
               <h2 class="card-title">New monthly check</h2>
@@ -498,7 +513,7 @@
               <input id="register" name="register" type="file" accept=".csv,.xlsx,.xlsm">
               <span class="drop-icon"><svg class="icon"><use href="#i-sheet"/></svg></span>
               <span class="drop-title">Purchase register <span class="optional">or use saved bills</span></span>
-              <span class="drop-hint" data-empty="CSV or Excel · drag here or click to choose">CSV or Excel · drag here or click to choose</span>
+              <span class="drop-hint" data-empty="CSV or Excel file">CSV or Excel file</span>
             </label>
 
             <label class="dropzone" id="gstr2b-zone">
@@ -536,6 +551,7 @@
           <p class="error" id="form-error" hidden></p>
         </form>
 
+        <div data-pane="history">
         <div class="card table-card">
           <div class="card-head padded">
             <h2 class="card-title">Past checks</h2>
@@ -558,6 +574,7 @@
           <button class="button danger small" id="delete-business" type="button">
             <svg class="icon"><use href="#i-trash"/></svg> Remove
           </button>
+        </div>
         </div>
       </div>
     </section>
@@ -695,6 +712,10 @@
       </div>
     </article>
   </template>
+
+  <div class="mobile-cta" id="mobile-cta" hidden>
+    <button class="button primary block large" id="mobile-cta-button" type="button"></button>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>

@@ -42,7 +42,11 @@ let activeStatus = null;
 
 const SCREENS = ["welcome", "auth", "home", "business", "loading", "results"];
 
+let screen = "welcome";
+
 function show(section, { scroll = true } = {}) {
+  screen = section;
+
   for (const id of SCREENS) {
     $(id).hidden = id !== section;
   }
@@ -50,7 +54,73 @@ function show(section, { scroll = true } = {}) {
   $("nav-public").hidden = Boolean(me);
   $("nav-app").hidden = !me;
 
+  const titles = {
+    home: me && me.user.role === "ca" ? "Your clients" : "Your businesses",
+    business: business ? business.name : "",
+    loading: "Checking…",
+    results: "Results",
+  };
+  $("nav-title").textContent = (me && titles[section]) || "";
+
+  updateCta();
   if (scroll) window.scrollTo({ top: 0 });
+}
+
+// ---------------------------------------------------------
+// Phone: one main action, fixed at the bottom of the screen
+// ---------------------------------------------------------
+
+let ctaAction = null;
+
+function updateCta() {
+  let label = "";
+  ctaAction = null;
+
+  if (screen === "business" && businessTab === "bills" && $("bill-form").hidden) {
+    label = "+ Add bill";
+    ctaAction = () => {
+      openBillForm();
+      $("bill-form").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+  } else if (screen === "business" && businessTab === "check") {
+    label = "Run check";
+    ctaAction = () => $("upload-form").requestSubmit();
+  } else if (screen === "results") {
+    label = "Download Excel report";
+    ctaAction = () => $("download").click();
+  }
+
+  $("mobile-cta-button").textContent = label;
+  $("mobile-cta").hidden = !label;
+  document.body.classList.toggle("has-cta", Boolean(label));
+}
+
+$("mobile-cta-button").addEventListener("click", () => ctaAction && ctaAction());
+
+// ---------------------------------------------------------
+// Business page tabs: Bills · Check · History
+// ---------------------------------------------------------
+
+let businessTab = "check";
+
+function setTab(name) {
+  businessTab = name;
+
+  for (const button of document.querySelectorAll(".segment")) {
+    const active = button.dataset.tab === name;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  }
+
+  for (const pane of document.querySelectorAll("#business [data-pane]")) {
+    pane.hidden = pane.dataset.pane !== name;
+  }
+
+  updateCta();
+}
+
+for (const button of document.querySelectorAll(".segment")) {
+  button.addEventListener("click", () => setTab(button.dataset.tab));
 }
 
 function setError(id, message) {
@@ -528,6 +598,7 @@ async function openBusiness(id) {
     return;
   }
 
+  const sameBusiness = Boolean(business && business.id === data.business.id);
   business = data.business;
 
   $("business-name").textContent = business.name;
@@ -540,6 +611,8 @@ async function openBusiness(id) {
 
   renderHistory(data.checks);
   closeBillForm();
+  // Shopkeepers mostly add bills; CAs mostly run checks.
+  setTab(sameBusiness ? businessTab : isCA() ? "check" : "bills");
   show("business");
   loadBills();
 }
@@ -897,12 +970,14 @@ function openBillForm() {
   resetConfirm();
   $("bill-form").hidden = false;
   $("bill-add-open").hidden = true;
+  updateCta();
   $("bill-gstin").focus();
 }
 
 function closeBillForm() {
   $("bill-form").hidden = true;
   $("bill-add-open").hidden = false;
+  updateCta();
 }
 
 $("bill-add-open").addEventListener("click", openBillForm);

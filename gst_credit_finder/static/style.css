@@ -1082,6 +1082,9 @@ button.table-row:hover .row-chevron { color: var(--brand); transform: translateX
 
 .stat-stack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 
+.two-col > *,
+.result-hero > * { min-width: 0; }
+
 .two-col {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -1532,22 +1535,295 @@ button.table-row:hover .row-chevron { color: var(--brand); transform: translateX
   .history-grid > :nth-child(5) { grid-column: 1 / -1; justify-content: flex-start; }
 }
 
+/* =========================================================
+   APP SHELL: page title, tabs, phone action bar
+   ========================================================= */
+
+.nav-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.nav-title {
+  display: none;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segment .icon { width: 16px; height: 16px; }
+.segment:hover { color: var(--ink); }
+.segment.active { background: var(--surface); color: var(--brand-700); box-shadow: var(--shadow-sm); }
+
+.mobile-cta { display: none; }
+
+/* =========================================================
+   PHONES
+   ========================================================= */
+
 @media (max-width: 560px) {
+  body { font-size: 15px; }
+
+  /* top bar: logo + page title, like an app */
+  .nav-inner { height: 56px; }
+  .brand-name { display: none; }
+  .brand-mark { width: 30px; height: 30px; border-radius: 8px; font-size: 14px; }
+  .nav-title { display: block; }
   .nav-public .nav-link { padding: 8px; }
-  .nav .brand > span:last-child { display: none; }
-  .hero-actions .button, .cta-inner .button, .page-header .button { width: 100%; }
-  .preview-row { grid-template-columns: 110px 1fr 56px; font-size: 11px; }
-  .stat-stack { grid-template-columns: 1fr; }
-  .stat-grid { gap: 10px; }
-  .stat { padding: 14px 16px; }
-  .stat-value { font-size: 21px; }
-  .role-grid { grid-template-columns: 1fr; }
-  .bar-row { grid-template-columns: 1fr auto; gap: 6px 12px; }
+  .avatar { width: 32px; height: 32px; }
+  .icon-button { width: 34px; height: 34px; }
+
+  /* bottom action bar */
+  body.has-cta { padding-bottom: 84px; }
+
+  .mobile-cta:not([hidden]) {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    display: block;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-cta .button { padding: 14px; font-size: 16px; border-radius: 12px; }
+
+  body.has-cta #bill-add-open,
+  body.has-cta #check-button,
+  body.has-cta #download { display: none !important; }
+
+  /* app screens: the title lives in the top bar */
+  .app-screen { padding: 16px 0 40px; }
+  #home-title, #business-name, #result-title { display: none; }
+  .page-header { gap: 10px; margin-bottom: 14px; }
+  .page-kicker { margin: 0; font-size: 14px; }
+  .page-sub { margin: 4px 0 0; }
+  .breadcrumb { margin-bottom: 8px; }
+  .page-header .button { width: 100%; padding: 12px; }
+
+  .card, .stat { border-radius: 14px; }
+  .bills-card, .upload, .breakdown-card, .counts-card, .compare-card, .add-business { padding: 16px; }
+  .card-head { margin-bottom: 14px; }
+  .card-title { font-size: 16px; }
+
+  /* tabs stick under the top bar */
+  .segmented {
+    position: sticky;
+    top: 64px;
+    z-index: 10;
+    display: flex;
+    margin: 0 0 14px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  }
+
+  .segment { flex: 1; padding: 9px 6px; }
+
+  /* dashboard */
+  .stat-grid { gap: 10px; margin-bottom: 16px; }
+  .stat { padding: 14px; }
+  .stat-label { font-size: 12px; }
+  .stat-value { font-size: 20px; }
+  .stat-note { font-size: 11px; }
+  .table-row { padding: 14px 16px; }
+
+  /* upload: compact drop zones, icon beside the text */
+  .dropzone {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    gap: 0 14px;
+    padding: 14px;
+    text-align: left;
+  }
+
+  .drop-icon { grid-row: span 2; width: 40px; height: 40px; margin: 0; }
+  .drop-title { font-size: 15px; }
+  .drop-hint { font-size: 12px; white-space: nowrap; }
+  .upload-foot { margin-top: 12px; }
+  .guide { padding: 10px 12px; }
+
+  .bill-row { gap: 10px; padding: 12px 0; }
+
+  /* results: one summary card, three small figures below the big one */
+  .result-hero { gap: 10px; margin-bottom: 14px; }
+  .hero-stat { padding: 18px; }
+  .hero-figure { font-size: 38px; }
+  .stat-stack { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .stat-stack .stat { display: flex; flex-direction: column; justify-content: space-between; padding: 12px 10px; }
+  .stat-stack .stat-label { gap: 4px; font-size: 11px; }
+  .stat-stack .stat-label .icon { display: none; }
+  .stat-stack .stat-value { font-size: 17px; }
+  .stat-stack .stat-note { display: none; }
+
+  .banner { gap: 10px; margin-bottom: 14px; padding: 12px 14px; font-size: 13px; }
+  .banner strong { font-size: 14px; }
+
+  .two-col { gap: 14px; }
+  .bar-row { grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13px; }
   .bar-row .bar-track { grid-column: 1 / -1; grid-row: 2; }
-  .result { flex-direction: column; gap: 8px; }
-  .result-side { justify-items: start; text-align: left; }
-  .reminders { grid-template-columns: 1fr; }
-  .upload-foot .button { width: 100%; }
+  .bar-value { min-width: 0; }
+
+  /* result filters become a swipeable chip row */
+  .counts-card { padding: 0; border: none; background: none; box-shadow: none; }
+  .counts-card .card-head { margin-bottom: 8px; }
+
+  .count-list {
+    display: flex;
+    gap: 8px;
+    margin: 0 -16px;
+    padding: 2px 16px 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .count-list::-webkit-scrollbar { display: none; }
+
+  .count-row {
+    flex: none;
+    gap: 6px;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .count-row .count-label { flex: none; }
+  .count-row.active { border-color: var(--brand); }
+
+  .section-title { margin: 24px 0 10px; }
+  .section-title h2 { font-size: 17px; }
+
+  .reminders { grid-template-columns: 1fr; gap: 10px; }
+  .reminder { padding: 14px; }
+  .reminder-actions .button { flex: 1; }
+
+  /* amount on the badge line; text gets the full width below */
+  .result { position: relative; display: block; padding: 14px; }
+  .result-top { min-height: 24px; padding-right: 110px; }
+  .result-side { position: absolute; top: 14px; right: 14px; }
+  .result-amount-label { display: none; }
+
+  /* bill form: flat, with pairs side by side */
+  .bill-form { margin: 0 0 14px; padding: 0 0 14px; border: none; border-bottom: 1px solid var(--line); border-radius: 0; background: none; }
+  .bill-grid .field:has(#bill-number),
+  .bill-grid .field:has(#bill-date),
+  .bill-grid .field:has(#bill-total) { grid-column: auto; }
+  .drop-title .optional { display: none; }
+  .result-supplier { font-size: 14px; }
+  .result-action { margin-top: 8px; font-size: 13px; }
+  .result-amount { font-size: 15px; }
+  .result-notes { font-size: 12px; }
+
   .compare-row { grid-template-columns: 0.7fr repeat(3, minmax(0, 1fr)); gap: 6px; padding: 10px; font-size: 11px; }
   .compare-row:not(.compare-head) span { white-space: nowrap; }
+
+  /* sign-up: the form only */
+  .auth-screen { padding: 16px 12px 40px; }
+  .auth-aside { display: none; }
+  .auth-main { padding: 20px 16px; }
+  .role-grid { grid-template-columns: 1fr 1fr; }
+  .role { flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; }
+
+  /* landing page: tighter, less to scroll */
+  .hero-grid { gap: 28px; padding-top: 28px; padding-bottom: 40px; }
+  .eyebrow { margin-bottom: 14px; font-size: 12px; }
+  .hero-copy h1 { margin-bottom: 12px; font-size: 32px; }
+  .lead { font-size: 16px; line-height: 1.55; }
+  .hero-actions { margin-top: 22px; }
+  .hero-actions .button, .cta-inner .button { width: 100%; }
+  .hero-points { gap: 6px 14px; margin-top: 18px; font-size: 13px; }
+  .preview-body { padding: 16px; }
+  .preview-amount { font-size: 34px; }
+  .preview-row { grid-template-columns: 112px 1fr 58px; gap: 8px; font-size: 11px; }
+  .preview-reminder { margin-top: 14px; }
+
+  .trust-inner {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 12px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .trust-inner::-webkit-scrollbar { display: none; }
+  .trust-inner > span { display: none; }
+
+  .trust-inner b {
+    flex: none;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-2);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .section { padding: 44px 0; }
+  .section-head { margin-bottom: 24px; }
+  .section-head h2 { font-size: 24px; }
+  .eyebrow.dark { margin-bottom: 10px; }
+
+  .steps-grid, .feature-grid { gap: 12px; }
+
+  .step-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 14px;
+    padding: 16px;
+  }
+
+  .step-card .step-icon { grid-row: span 2; width: 24px; height: 24px; margin-top: 2px; }
+  .step-card h3 { margin: 0; font-size: 15px; }
+  .step-card p { font-size: 14px; }
+  .step-num { top: 12px; right: 14px; font-size: 22px; }
+
+  .feature {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 14px;
+    padding: 0;
+  }
+
+  .feature .feature-icon { grid-row: span 2; width: 40px; height: 40px; }
+  .feature h3 { margin: 0; font-size: 15px; }
+  .feature p { font-size: 14px; }
+
+  .audience-grid { gap: 12px; }
+  .audience-card { padding: 20px; }
+  .audience-card h3 { margin-top: 12px; font-size: 19px; }
+  .check-list { margin-top: 14px; gap: 8px; font-size: 14px; }
+
+  .cta-inner { padding-top: 36px; padding-bottom: 36px; }
+  .footer-inner { padding-top: 16px; padding-bottom: 16px; }
 }
