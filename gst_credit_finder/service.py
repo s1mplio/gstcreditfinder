@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 from .gstr2b import Gstr2bLoad
 from .matcher import action, label, match, needs_action
-from .models import MatchResult
+from .models import ZERO, MatchResult
 from .register import RegisterLoad
 from .report import Summary, supplier_reminders, summarize
 
@@ -23,6 +23,35 @@ class CheckOutcome:
     register_errors: List[str] = field(default_factory=list)
     register_warnings: List[str] = field(default_factory=list)
     skipped: List[str] = field(default_factory=list)
+    # Credit GSTR-2B makes available, per return period (for the 3B check).
+    itc_2b: List[dict] = field(default_factory=list)
+
+
+def _itc_by_period(gstr2b_loads: List[Gstr2bLoad]) -> List[dict]:
+    """
+    Claimable B2B credit in each GSTR-2B, by tax head: what GSTR-3B
+    Table 4A(5) can claim for that month. Reverse-charge and 'ITC not
+    available' records are left out; credit notes aren't read yet.
+    """
+    totals = {}
+
+    for load in gstr2b_loads:
+        if not load.period:
+            continue
+
+        heads = totals.setdefault(load.period, {"igst": ZERO, "cgst": ZERO, "sgst": ZERO, "cess": ZERO})
+
+        for invoice in load.invoices:
+            if invoice.itc_available and not invoice.reverse_charge:
+                heads["igst"] += invoice.igst
+                heads["cgst"] += invoice.cgst
+                heads["sgst"] += invoice.sgst
+                heads["cess"] += invoice.cess
+
+    return [
+        {"period": period, **heads}
+        for period, heads in sorted(totals.items(), key=lambda item: (item[0][2:], item[0][:2]))
+    ]
 
 
 def _period_text(periods: List[str]) -> str:
@@ -62,6 +91,7 @@ def run_check(
         register_errors=register.errors,
         register_warnings=register.warnings,
         skipped=skipped,
+        itc_2b=_itc_by_period(gstr2b_loads),
     )
 
 
@@ -134,4 +164,8 @@ def outcome_to_dict(outcome: CheckOutcome) -> dict:
         "register_errors": outcome.register_errors,
         "register_warnings": outcome.register_warnings,
         "skipped": outcome.skipped,
+        "itc_2b": [
+            {"period": row["period"], **{head: _money(row[head]) for head in ("igst", "cgst", "sgst", "cess")}}
+            for row in outcome.itc_2b
+        ],
     }

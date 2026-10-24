@@ -3,128 +3,697 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GST Credit Finder</title>
+  <title>GST Credit Finder: recover the input tax credit you're losing</title>
   <meta name="description" content="Find the GST input tax credit you're losing because suppliers didn't file. Upload bills and GSTR-2B, get results in a minute.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f766e'/><text x='16' y='22' font-size='17' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'>₹</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="wrap topbar-inner">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-rupee" viewBox="0 0 24 24"><path d="M6 3h12M6 8h12M6 13l8.5 8M6 13h3a5 5 0 0 0 0-10"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.5 8.5 0 1 1 21 11.5z"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></symbol>
+      <symbol id="i-sheet" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+      <symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v8h14v-8"/></symbol>
+      <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/></symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- ================= NAVIGATION ================= -->
+  <header class="nav">
+    <div class="wrap nav-inner">
       <a class="brand" href="/">
         <span class="brand-mark">₹</span>
-        GST Credit Finder
+        <span>GST Credit Finder</span>
       </a>
-      <button class="link-button" id="demo-top" type="button">See a demo</button>
+
+      <nav class="nav-public" id="nav-public">
+        <a class="nav-link hide-mobile" href="#how">How it works</a>
+        <a class="nav-link hide-mobile" href="#features">Features</a>
+        <a class="nav-link hide-mobile" href="#audience">For CAs</a>
+        <button class="nav-link" id="nav-login" type="button">Log in</button>
+        <button class="button primary small" id="nav-signup" type="button">Get started</button>
+      </nav>
+
+      <nav class="nav-app" id="nav-app" hidden>
+        <button class="nav-link hide-mobile" id="nav-dashboard" type="button">Dashboard</button>
+        <button class="nav-link hide-mobile" id="demo-top" type="button">Sample report</button>
+        <div class="user-chip">
+          <span class="avatar" id="user-avatar"></span>
+          <span class="user-text hide-mobile">
+            <span class="user-name" id="user-name"></span>
+            <span class="user-role" id="user-role"></span>
+          </span>
+        </div>
+        <button class="icon-button" id="logout" type="button" title="Log out" aria-label="Log out">
+          <svg class="icon"><use href="#i-logout"/></svg>
+        </button>
+      </nav>
     </div>
   </header>
 
-  <main class="wrap">
+  <main>
 
-    <!-- ================= HERO + UPLOAD ================= -->
-    <section id="start">
-      <div class="hero">
-        <h1>Find the GST credit you're losing</h1>
-        <p>When suppliers file late, file wrong amounts, or don't file at all, your input tax credit silently disappears. Upload your purchase bills and GSTR-2B to see exactly how much, and who to chase.</p>
+    <!-- ================= LANDING ================= -->
+    <section id="welcome" hidden>
+      <div class="hero-band">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <span class="eyebrow">For shopkeepers and Chartered Accountants</span>
+            <h1>Find the GST credit you're losing, and get it back.</h1>
+            <p class="lead">When suppliers file late, file the wrong amount, or don't file at all, your input tax credit quietly disappears. Match your purchase bills against GSTR-2B in a minute and see exactly who to chase.</p>
+            <div class="hero-actions">
+              <button class="button primary large" id="hero-signup" type="button">Create free account</button>
+              <button class="button ghost-light large" id="demo-button" type="button">
+                <svg class="icon"><use href="#i-play"/></svg> See a sample report
+              </button>
+            </div>
+            <ul class="hero-points">
+              <li><svg class="icon"><use href="#i-check"/></svg> No software to install</li>
+              <li><svg class="icon"><use href="#i-check"/></svg> Works with Excel or CSV</li>
+              <li><svg class="icon"><use href="#i-check"/></svg> Uploaded files never stored</li>
+            </ul>
+          </div>
+
+          <div class="hero-preview" aria-hidden="true">
+            <div class="preview-card">
+              <div class="preview-head">
+                <span class="preview-dot"></span><span class="preview-dot"></span><span class="preview-dot"></span>
+                <span class="preview-title">GSTR-2B Sep–Oct 2026 · sample data</span>
+              </div>
+              <div class="preview-body">
+                <p class="preview-label">GST credit at risk</p>
+                <p class="preview-amount">₹39,741</p>
+                <p class="preview-sub">₹69,444 confirmed and safe to claim</p>
+                <div class="preview-bars">
+                  <div class="preview-row"><span>Missing in GSTR-2B</span><span class="preview-track"><i style="width:100%"></i></span><b>₹29,001</b></div>
+                  <div class="preview-row"><span>IGST vs CGST/SGST</span><span class="preview-track"><i style="width:28%"></i></span><b>₹8,037</b></div>
+                  <div class="preview-row"><span>Credit not available</span><span class="preview-track"><i style="width:6%"></i></span><b>₹1,672</b></div>
+                  <div class="preview-row"><span>Invalid GSTIN</span><span class="preview-track"><i style="width:3%"></i></span><b>₹780</b></div>
+                </div>
+                <div class="preview-reminder">
+                  <div>
+                    <b>Sharma Traders</b>
+                    <span>ST-0982 · claim deadline in 38 days</span>
+                  </div>
+                  <span class="preview-wa"><svg class="icon"><use href="#i-chat"/></svg> WhatsApp</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <form class="card upload" id="upload-form">
-        <div class="step">
-          <div class="step-number">1</div>
-          <div class="step-body">
-            <label for="register">Purchase register</label>
-            <p class="hint">Your purchase bills as CSV or Excel. <a href="/api/template" download>Download the template</a></p>
-            <input id="register" name="register" type="file" accept=".csv,.xlsx,.xlsm" required>
+      <div class="trust-strip">
+        <div class="wrap trust-inner">
+          <span>Built on the GST rules that decide your credit:</span>
+          <b>Section 16(2)(aa)</b>
+          <b>Section 16(4) time limit</b>
+          <b>GSTIN checksum validation</b>
+          <b>IGST / CGST+SGST place of supply</b>
+        </div>
+      </div>
+
+      <section class="section" id="how">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow dark">How it works</span>
+            <h2>Three steps, about a minute</h2>
+          </div>
+          <div class="steps-grid">
+            <div class="step-card">
+              <span class="step-num">1</span>
+              <svg class="icon step-icon"><use href="#i-file"/></svg>
+              <h3>Upload your purchase register</h3>
+              <p>Excel or CSV export from Tally, Busy or your own sheet. Common column names are recognised automatically.</p>
+            </div>
+            <div class="step-card">
+              <span class="step-num">2</span>
+              <svg class="icon step-icon"><use href="#i-upload"/></svg>
+              <h3>Add GSTR-2B from the portal</h3>
+              <p>Download the JSON from the GST portal. Add later months too, to catch suppliers who filed late.</p>
+            </div>
+            <div class="step-card">
+              <span class="step-num">3</span>
+              <svg class="icon step-icon"><use href="#i-search"/></svg>
+              <h3>See what's at risk and act</h3>
+              <p>Every bill is matched, every gap gets a rupee value, and every supplier gets a ready message.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section muted-bg" id="features">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow dark">Features</span>
+            <h2>Everything you need to protect your credit</h2>
+          </div>
+          <div class="feature-grid">
+            <div class="feature"><span class="feature-icon"><svg class="icon"><use href="#i-search"/></svg></span><h3>Exact, explainable matching</h3><p>Handles "INV/26-27/0458" vs "458", amount differences, wrong tax type and duplicate bills, with the reason shown for each.</p></div>
+            <div class="feature"><span class="feature-icon"><svg class="icon"><use href="#i-rupee"/></svg></span><h3>Rupee value on every gap</h3><p>Know exactly how much credit each missing or mismatched bill is costing you.</p></div>
+            <div class="feature"><span class="feature-icon"><svg class="icon"><use href="#i-chat"/></svg></span><h3>WhatsApp reminders</h3><p>A polite, ready-to-send message per supplier listing the invoices they need to file or correct.</p></div>
+            <div class="feature"><span class="feature-icon"><svg class="icon"><use href="#i-clock"/></svg></span><h3>Claim deadline alerts</h3><p>Bills close to the Section 16(4) time limit are flagged first, so nothing lapses.</p></div>
+            <div class="feature"><span class="feature-icon"><svg class="icon"><use href="#i-trend"/></svg></span><h3>Month-on-month recovery</h3><p>Every check is saved. Next month you see the credit that came back and which suppliers fixed it.</p></div>
+            <div class="feature"><span class="feature-icon"><svg class="icon"><use href="#i-sheet"/></svg></span><h3>Excel report for your CA</h3><p>Summary, action list, supplier reminders and every invoice, in one workbook.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="audience">
+        <div class="wrap audience-grid">
+          <div class="audience-card">
+            <span class="feature-icon"><svg class="icon"><use href="#i-store"/></svg></span>
+            <h3>For shopkeepers</h3>
+            <p>Check your own credit every month without waiting on anyone.</p>
+            <ul class="check-list">
+              <li>See the money you're losing in one number</li>
+              <li>Message suppliers straight from your phone</li>
+              <li>Track who replied and who fixed it</li>
+            </ul>
+          </div>
+          <div class="audience-card dark">
+            <span class="feature-icon"><svg class="icon"><use href="#i-briefcase"/></svg></span>
+            <h3>For CAs and accountants</h3>
+            <p>Run 2B reconciliation for every client from one dashboard.</p>
+            <ul class="check-list">
+              <li>All clients with their credit at risk at a glance</li>
+              <li>Wrong-client uploads are blocked by GSTIN</li>
+              <li>Client-ready Excel report every month</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-band">
+        <div class="wrap cta-inner">
+          <div>
+            <h2>Stop losing input tax credit</h2>
+            <p>Free to start. Your first check takes about a minute.</p>
+          </div>
+          <button class="button white large" id="cta-signup" type="button">Create free account</button>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= LOGIN / SIGN-UP ================= -->
+    <section id="auth" class="auth-screen" hidden>
+      <div class="auth-shell">
+        <aside class="auth-aside">
+          <span class="brand-mark large">₹</span>
+          <h2>Recover the GST credit your suppliers cost you</h2>
+          <ul class="check-list light">
+            <li>Match every bill against GSTR-2B</li>
+            <li>Chase suppliers on WhatsApp in one tap</li>
+            <li>See what you recovered each month</li>
+          </ul>
+          <p class="auth-privacy"><svg class="icon"><use href="#i-lock"/></svg> Uploaded files are processed in memory and never stored.</p>
+        </aside>
+
+        <div class="auth-main">
+          <div class="tabs" role="tablist">
+            <button class="tab active" id="tab-signup" type="button" role="tab">Create account</button>
+            <button class="tab" id="tab-login" type="button" role="tab">Log in</button>
+          </div>
+
+          <form id="signup-form" class="form">
+            <fieldset class="roles">
+              <legend>I am a</legend>
+              <div class="role-grid">
+                <label class="role">
+                  <input type="radio" name="role" value="shop" checked>
+                  <svg class="icon"><use href="#i-store"/></svg>
+                  <span><b>Shopkeeper</b><small>My own business</small></span>
+                </label>
+                <label class="role">
+                  <input type="radio" name="role" value="ca">
+                  <svg class="icon"><use href="#i-briefcase"/></svg>
+                  <span><b>CA / accountant</b><small>I manage clients</small></span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="field">
+              <label for="signup-name">Your name</label>
+              <input id="signup-name" type="text" maxlength="120" autocomplete="name" required>
+            </div>
+
+            <div class="field">
+              <label for="signup-login">Mobile number or email</label>
+              <input id="signup-login" type="text" autocomplete="username" inputmode="email" required placeholder="98765 43210">
+            </div>
+
+            <div class="field">
+              <label for="signup-password">Password</label>
+              <input id="signup-password" type="password" minlength="8" autocomplete="new-password" required placeholder="At least 8 characters">
+            </div>
+
+            <div id="shop-fields" class="field-row">
+              <div class="field">
+                <label for="signup-business">Shop / business name</label>
+                <input id="signup-business" type="text" maxlength="120" placeholder="Shree Ganesh Kirana Stores">
+              </div>
+              <div class="field">
+                <label for="signup-gstin">GSTIN <span class="optional">optional</span></label>
+                <input id="signup-gstin" type="text" maxlength="15" autocapitalize="characters" placeholder="Filled from GSTR-2B">
+              </div>
+            </div>
+
+            <button class="button primary block" type="submit">Create free account</button>
+            <p class="consent">By creating an account you agree to the <a href="/terms" target="_blank">Terms</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</p>
+          </form>
+
+          <form id="login-form" class="form" hidden>
+            <div class="field">
+              <label for="login-login">Mobile number or email</label>
+              <input id="login-login" type="text" autocomplete="username" inputmode="email" required>
+            </div>
+
+            <div class="field">
+              <label for="login-password">Password</label>
+              <input id="login-password" type="password" autocomplete="current-password" required>
+            </div>
+
+            <button class="button primary block" type="submit">Log in</button>
+            <button class="link-button forgot-link" id="forgot-open" type="button">Forgot password?</button>
+          </form>
+
+          <form id="reset-form" class="form" hidden>
+            <div>
+              <h2 class="card-title">Reset your password</h2>
+              <p class="muted small-text" id="reset-intro">Enter your mobile number or email. We'll send a 6-digit code.</p>
+            </div>
+
+            <div class="field">
+              <label for="reset-login">Mobile number or email</label>
+              <input id="reset-login" type="text" autocomplete="username" inputmode="email" required>
+            </div>
+
+            <div id="reset-step2" class="form" hidden>
+              <div class="field">
+                <label for="reset-code">6-digit code</label>
+                <input id="reset-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}">
+              </div>
+              <div class="field">
+                <label for="reset-password">New password</label>
+                <input id="reset-password" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+              </div>
+            </div>
+
+            <button class="button primary block" id="reset-submit" type="submit">Send code</button>
+            <button class="link-button forgot-link" id="reset-cancel" type="button">Back to log in</button>
+          </form>
+
+          <p class="error" id="auth-error" hidden></p>
+
+          <p class="auth-foot">
+            <button class="link-button" id="auth-back" type="button">
+              <svg class="icon"><use href="#i-arrow-left"/></svg> Back to home
+            </button>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DASHBOARD ================= -->
+    <section id="home" class="app-screen" hidden>
+      <div class="wrap">
+        <div class="page-header">
+          <div>
+            <p class="page-kicker" id="home-kicker"></p>
+            <h1 id="home-title">Dashboard</h1>
+          </div>
+          <button class="button primary" id="add-business-toggle" type="button">
+            <svg class="icon"><use href="#i-plus"/></svg> <span id="add-business-label">Add business</span>
+          </button>
+        </div>
+
+        <div class="stat-grid" id="home-stats"></div>
+
+        <form class="card form add-business" id="add-business-form" hidden>
+          <h2 class="card-title" id="add-business-title">Add a business</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="new-business-name">Business name</label>
+              <input id="new-business-name" type="text" maxlength="120" required>
+            </div>
+            <div class="field">
+              <label for="new-business-gstin">GSTIN <span class="optional">optional</span></label>
+              <input id="new-business-gstin" type="text" maxlength="15" autocapitalize="characters">
+            </div>
+          </div>
+          <div class="actions">
+            <button class="button primary" type="submit">Add</button>
+            <button class="button secondary" id="add-business-cancel" type="button">Cancel</button>
+          </div>
+          <p class="error" id="add-business-error" hidden></p>
+        </form>
+
+        <div class="card table-card">
+          <div class="table-head business-grid">
+            <span id="business-col-name">Business</span>
+            <span>Last check</span>
+            <span class="num">Credit at risk</span>
+            <span>Status</span>
+            <span></span>
+          </div>
+          <div id="business-list"></div>
+        </div>
+
+        <details class="account-settings">
+          <summary>Account settings</summary>
+          <p class="muted" id="account-login"></p>
+          <label class="switch settings-switch"><input type="checkbox" id="notify-toggle"><span class="switch-track"></span> Remind me each month when GSTR-2B is ready (around the 14th)</label>
+          <button class="button danger small" id="delete-account" type="button">
+            <svg class="icon"><use href="#i-trash"/></svg> Delete my account and all saved data
+          </button>
+        </details>
+      </div>
+    </section>
+
+    <!-- ================= ONE BUSINESS ================= -->
+    <section id="business" class="app-screen" hidden>
+      <div class="wrap">
+        <nav class="breadcrumb">
+          <button class="link-button" id="back-home" type="button">
+            <svg class="icon"><use href="#i-arrow-left"/></svg> <span id="back-home-label">All businesses</span>
+          </button>
+        </nav>
+
+        <div class="page-header">
+          <div>
+            <h1 id="business-name"></h1>
+            <p class="page-sub"><span class="pill" id="business-gstin"></span></p>
           </div>
         </div>
 
-        <div class="step">
-          <div class="step-number">2</div>
-          <div class="step-body">
-            <label for="gstr2b">GSTR-2B (JSON from the GST portal)</label>
-            <p class="hint">GST portal &rarr; Returns &rarr; GSTR-2B &rarr; download JSON. Add the next months too, to catch suppliers who filed late.</p>
-            <input id="gstr2b" name="gstr2b" type="file" accept=".json" multiple required>
+        <div class="card bills-card" id="bills-card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Purchase bills</h2>
+              <p class="muted small-text" id="bills-summary">Add each supplier bill as it arrives. No Excel needed.</p>
+            </div>
+            <div class="bills-tools">
+              <select id="bills-month" aria-label="Month"></select>
+              <button class="button primary small" id="bill-add-open" type="button">
+                <svg class="icon"><use href="#i-plus"/></svg> Add bill
+              </button>
+            </div>
           </div>
+
+          <form class="bill-form" id="bill-form" hidden novalidate>
+            <div class="bill-grid">
+              <div class="field span-2">
+                <label for="bill-gstin">Supplier GSTIN</label>
+                <input id="bill-gstin" type="text" maxlength="15" autocapitalize="characters" autocomplete="off" list="bill-suppliers" placeholder="27AAAAA0000A1Z5" required>
+                <datalist id="bill-suppliers"></datalist>
+                <span class="field-hint" id="bill-gstin-hint"></span>
+              </div>
+              <div class="field span-2">
+                <label for="bill-name">Supplier name</label>
+                <input id="bill-name" type="text" maxlength="120" placeholder="Sharma Traders">
+              </div>
+              <div class="field span-2">
+                <label for="bill-number">Invoice number</label>
+                <input id="bill-number" type="text" maxlength="40" placeholder="ST/26-27/0982" required>
+              </div>
+              <div class="field span-2">
+                <label for="bill-date">Invoice date</label>
+                <input id="bill-date" type="date" required>
+              </div>
+
+              <div class="field span-2">
+                <label for="bill-taxable">Taxable value <span class="optional">before GST</span></label>
+                <input id="bill-taxable" type="text" inputmode="decimal" placeholder="10000" required>
+              </div>
+              <div class="field">
+                <label for="bill-rate">GST rate</label>
+                <select id="bill-rate">
+                  <option value="5">5%</option>
+                  <option value="12">12%</option>
+                  <option value="18" selected>18%</option>
+                  <option value="28">28%</option>
+                  <option value="">Other / mixed</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="bill-place">Supplier is</label>
+                <select id="bill-place">
+                  <option value="intra">In my state</option>
+                  <option value="inter">In another state</option>
+                </select>
+              </div>
+
+              <div class="field tax-field" data-place="inter"><label for="bill-igst">IGST</label><input id="bill-igst" type="text" inputmode="decimal" placeholder="0"></div>
+              <div class="field tax-field" data-place="intra"><label for="bill-cgst">CGST</label><input id="bill-cgst" type="text" inputmode="decimal" placeholder="0"></div>
+              <div class="field tax-field" data-place="intra"><label for="bill-sgst">SGST</label><input id="bill-sgst" type="text" inputmode="decimal" placeholder="0"></div>
+              <div class="field"><label for="bill-cess">Cess</label><input id="bill-cess" type="text" inputmode="decimal" placeholder="0"></div>
+              <div class="field span-2"><label for="bill-total">Bill total</label><input id="bill-total" type="text" inputmode="decimal" placeholder="0"></div>
+            </div>
+
+            <div class="banner notice bill-warnings" id="bill-warnings" hidden></div>
+            <p class="error" id="bill-error" hidden></p>
+
+            <div class="bill-actions">
+              <button class="button primary" id="bill-save" type="submit">Save bill</button>
+              <button class="button secondary" id="bill-cancel" type="button">Cancel</button>
+              <span class="muted small-text" id="bill-saved"></span>
+            </div>
+          </form>
+
+          <div class="bills-table" id="bills-list"></div>
         </div>
 
-        <div class="step">
-          <div class="step-number">3</div>
-          <div class="step-body">
-            <label for="buyer_name">Your business name <span class="optional">(optional)</span></label>
-            <p class="hint">Used in the reminder messages to suppliers.</p>
-            <input id="buyer_name" name="buyer_name" type="text" maxlength="120" placeholder="e.g. Shree Ganesh Kirana Stores">
+        <form class="card upload" id="upload-form">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">New monthly check</h2>
+              <p class="muted small-text">Match this month's purchase bills against GSTR-2B.</p>
+            </div>
+            <a class="link-button small-text" href="/api/template" download>
+              <svg class="icon"><use href="#i-download"/></svg> Register template
+            </a>
           </div>
+
+          <div class="drop-grid">
+            <label class="dropzone" id="register-zone">
+              <input id="register" name="register" type="file" accept=".csv,.xlsx,.xlsm">
+              <span class="drop-icon"><svg class="icon"><use href="#i-sheet"/></svg></span>
+              <span class="drop-title">Purchase register <span class="optional">or use saved bills</span></span>
+              <span class="drop-hint" data-empty="CSV or Excel · drag here or click to choose">CSV or Excel · drag here or click to choose</span>
+            </label>
+
+            <label class="dropzone" id="gstr2b-zone">
+              <input id="gstr2b" name="gstr2b" type="file" accept=".json,.zip" multiple required>
+              <span class="drop-icon"><svg class="icon"><use href="#i-file"/></svg></span>
+              <span class="drop-title">GSTR-2B JSON</span>
+              <span class="drop-hint" data-empty="JSON or ZIP · one or more months">JSON or ZIP · one or more months</span>
+            </label>
+          </div>
+
+          <div class="saved-bills" id="saved-bills" hidden>
+            <p class="saved-bills-title">Include bills saved in the app</p>
+            <div class="saved-bills-list" id="saved-bills-list"></div>
+          </div>
+
+          <details class="guide">
+            <summary><svg class="icon"><use href="#i-file"/></svg> How do I get GSTR-2B from the GST portal?</summary>
+            <ol>
+              <li>Go to <a href="https://www.gst.gov.in" target="_blank" rel="noopener">www.gst.gov.in</a> and log in.</li>
+              <li>Open <b>Services → Returns → Returns Dashboard</b>.</li>
+              <li>Choose the <b>financial year</b> and the <b>month</b>, then click <b>Search</b>.</li>
+              <li>On the <b>GSTR-2B</b> tile, click <b>Download</b> (or View, then Download).</li>
+              <li>Click <b>Download JSON</b>, not PDF or Excel. Large returns come as a ZIP; upload it as it is.</li>
+            </ol>
+            <p class="muted small-text">GSTR-2B for a month is ready on the <b>14th of the next month</b>. Add the following months too: a supplier who filed late shows up there, and you'll see that credit as recovered.</p>
+          </details>
+
+          <div class="upload-foot">
+            <p class="privacy"><svg class="icon"><use href="#i-lock"/></svg> Files are not stored. Only results are saved, to show next month's recovery.</p>
+            <button class="button primary" id="check-button" type="submit">
+              <svg class="icon"><use href="#i-search"/></svg> Run check
+            </button>
+          </div>
+
+          <p class="error" id="form-error" hidden></p>
+        </form>
+
+        <div class="card table-card">
+          <div class="card-head padded">
+            <h2 class="card-title">Past checks</h2>
+          </div>
+          <div class="table-head history-grid">
+            <span>Period</span>
+            <span>Checked on</span>
+            <span class="num">At risk</span>
+            <span class="num">Recovered</span>
+            <span></span>
+          </div>
+          <div id="history"></div>
         </div>
 
-        <div class="actions">
-          <button class="button primary" id="check-button" type="submit">Check my credit</button>
-          <button class="button secondary" id="demo-button" type="button">Try with sample data</button>
+        <div class="danger-zone">
+          <div>
+            <b>Remove business</b>
+            <p class="muted small-text">Deletes the business and all its saved checks. This cannot be undone.</p>
+          </div>
+          <button class="button danger small" id="delete-business" type="button">
+            <svg class="icon"><use href="#i-trash"/></svg> Remove
+          </button>
         </div>
-
-        <p class="privacy">🔒 Files are processed in memory and are not stored.</p>
-        <p class="error" id="form-error" hidden></p>
-      </form>
+      </div>
     </section>
 
     <!-- ================= LOADING ================= -->
-    <section id="loading" class="card loading" hidden>
-      <div class="spinner"></div>
-      <p>Matching your bills against GSTR-2B&hellip;</p>
+    <section id="loading" class="app-screen" hidden>
+      <div class="wrap">
+        <div class="card loading">
+          <div class="spinner"></div>
+          <p><b>Matching your bills against GSTR-2B&hellip;</b></p>
+          <p class="muted small-text">Checking GSTINs, invoice numbers, amounts and tax type.</p>
+        </div>
+      </div>
     </section>
 
     <!-- ================= RESULTS ================= -->
-    <section id="results" hidden>
-      <div class="results-header">
-        <button class="link-button" id="new-check" type="button">&larr; New check</button>
-        <span class="muted" id="result-meta"></span>
-      </div>
+    <section id="results" class="app-screen" hidden>
+      <div class="wrap">
+        <nav class="breadcrumb">
+          <button class="link-button" id="new-check" type="button">
+            <svg class="icon"><use href="#i-arrow-left"/></svg> Back
+          </button>
+        </nav>
 
-      <div class="card headline">
-        <div>
-          <p class="headline-label">GST credit at risk</p>
-          <p class="headline-amount" id="total-at-risk"></p>
-          <p class="muted" id="claimable"></p>
+        <div class="page-header">
+          <div>
+            <p class="page-kicker" id="result-period"></p>
+            <h1 id="result-title"></h1>
+            <p class="page-sub muted" id="result-meta"></p>
+          </div>
+          <a class="button primary" id="download" href="#" download>
+            <svg class="icon"><use href="#i-download"/></svg> Download Excel report
+          </a>
         </div>
-        <a class="button primary" id="download" href="#" download>Download Excel report</a>
+
+        <div class="banner recovered" id="recovered" hidden></div>
+
+        <div class="result-hero">
+          <div class="card hero-stat" id="hero-stat">
+            <p class="stat-label">GST credit at risk</p>
+            <p class="hero-figure" id="total-at-risk"></p>
+            <p class="muted small-text" id="hero-note"></p>
+          </div>
+          <div class="stat-stack" id="result-stats"></div>
+        </div>
+
+        <div class="banner urgent" id="urgent" hidden></div>
+
+        <div id="notices"></div>
+
+        <div class="two-col">
+          <div class="card breakdown-card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Where the credit is stuck</h2>
+                <p class="muted small-text">Credit at risk by problem type</p>
+              </div>
+            </div>
+            <div class="breakdown" id="breakdown"></div>
+          </div>
+
+          <div class="card counts-card">
+            <div class="card-head">
+              <h2 class="card-title">Bills by result</h2>
+            </div>
+            <div class="count-list" id="chips"></div>
+          </div>
+        </div>
+
+        <div class="card compare-card" id="compare-section" hidden>
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Compare with your GSTR-3B</h2>
+              <p class="muted small-text">Enter the ITC claimed in GSTR-3B Table 4A(5) "All other ITC". Claiming more than GSTR-2B allows can bring a notice from the department.</p>
+            </div>
+          </div>
+          <form id="compare-form" class="compare-form">
+            <div class="field">
+              <label for="compare-period">Return period</label>
+              <select id="compare-period"></select>
+            </div>
+            <div class="field"><label for="compare-igst">IGST</label><input id="compare-igst" type="text" inputmode="decimal" placeholder="0"></div>
+            <div class="field"><label for="compare-cgst">CGST</label><input id="compare-cgst" type="text" inputmode="decimal" placeholder="0"></div>
+            <div class="field"><label for="compare-sgst">SGST/UTGST</label><input id="compare-sgst" type="text" inputmode="decimal" placeholder="0"></div>
+            <div class="field"><label for="compare-cess">Cess</label><input id="compare-cess" type="text" inputmode="decimal" placeholder="0"></div>
+            <button class="button primary" type="submit">Compare</button>
+          </form>
+          <div id="compare-result"></div>
+        </div>
+
+        <div id="reminders-section" hidden>
+          <div class="section-title">
+            <h2>Suppliers to chase</h2>
+            <p class="muted small-text">Send each supplier a ready message, then mark where it stands.</p>
+          </div>
+          <div class="reminders" id="reminders"></div>
+        </div>
+
+        <div class="section-title list-header">
+          <h2 id="list-title">Problems to fix</h2>
+          <label class="switch"><input type="checkbox" id="show-all"><span class="switch-track"></span> Show matched bills</label>
+        </div>
+        <div class="results-list" id="results-list"></div>
+
+        <p class="disclaimer">This report checks your data against GSTR-2B. It is not tax advice; confirm credit decisions with your Chartered Accountant.</p>
       </div>
-
-      <div class="alert urgent" id="urgent" hidden></div>
-
-      <div id="notices"></div>
-
-      <h2>Summary</h2>
-      <div class="chips" id="chips"></div>
-
-      <div id="reminders-section" hidden>
-        <h2>Suppliers to chase</h2>
-        <p class="hint">Send each supplier a ready-made message asking them to file or correct their GST return.</p>
-        <div class="reminders" id="reminders"></div>
-      </div>
-
-      <h2 id="list-title">Problems to fix</h2>
-      <div class="filters">
-        <label class="toggle"><input type="checkbox" id="show-all"> Show matched invoices too</label>
-      </div>
-      <div class="results-list" id="results-list"></div>
-
-      <p class="disclaimer">This report checks your data against GSTR-2B. It is not tax advice; confirm credit decisions with your Chartered Accountant.</p>
     </section>
   </main>
 
-  <footer class="wrap footer">
-    GST Credit Finder &middot; Matching is done by exact rules, not guesses.
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <span class="brand small"><span class="brand-mark">₹</span> GST Credit Finder</span>
+      <span class="footer-links">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <span class="muted">Not tax advice.</span>
+      </span>
+    </div>
   </footer>
 
   <template id="result-template">
     <article class="result">
-      <div class="result-top">
-        <span class="badge"></span>
-        <span class="result-amount"></span>
+      <div class="result-main">
+        <div class="result-top">
+          <span class="badge"></span>
+          <span class="result-supplier"></span>
+        </div>
+        <p class="result-invoice"></p>
+        <p class="result-action"></p>
+        <ul class="result-notes"></ul>
       </div>
-      <p class="result-supplier"></p>
-      <p class="result-invoice muted"></p>
-      <p class="result-action"></p>
-      <ul class="result-notes"></ul>
+      <div class="result-side">
+        <span class="result-amount"></span>
+        <span class="result-amount-label"></span>
+      </div>
     </article>
   </template>
 

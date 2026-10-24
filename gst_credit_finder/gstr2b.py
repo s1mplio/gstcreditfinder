@@ -8,7 +8,9 @@ matched. Field names follow the portal's GSTR-2B JSON; verify against
 a real download, since the portal format can change.
 """
 
+import io
 import json
+import zipfile
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Dict, List
@@ -79,6 +81,57 @@ def _invoice(supplier: dict, record: dict, period: str, origin: str) -> Invoice:
 
 def load_gstr2b(path) -> Gstr2bLoad:
     return load_gstr2b_bytes(Path(path).read_bytes(), str(path))
+
+
+def load_gstr2b_upload(content: bytes, filename: str, max_bytes: int, max_files: int) -> List[Gstr2bLoad]:
+    """
+    An uploaded GSTR-2B: a JSON file, or the ZIP the portal gives for
+    large returns. PDF and Excel downloads get a clear error.
+    """
+    origin = str(filename).replace("\\", "/").split("/")[-1]
+
+    if content.startswith(b"%PDF"):
+        raise ValueError(
+            f"{origin} is the PDF version of GSTR-2B. On the GST portal, "
+            "use 'Download JSON' instead of PDF."
+        )
+
+    if not content.startswith(b"PK"):
+        return [load_gstr2b_bytes(content, origin)]
+
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(content))
+        names = archive.namelist()
+    except zipfile.BadZipFile:
+        raise ValueError(f"{origin} is a damaged ZIP file. Download it again from the GST portal.")
+
+    if any(name.startswith("xl/") for name in names):
+        raise ValueError(
+            f"{origin} is the Excel version of GSTR-2B. On the GST portal, "
+            "use 'Download JSON' instead of Excel."
+        )
+
+    members = [info for info in archive.infolist() if info.filename.lower().endswith(".json")]
+
+    if not members:
+        raise ValueError(f"{origin} has no GSTR-2B JSON file inside.")
+
+    if len(members) > max_files:
+        raise ValueError(f"{origin} has more than {max_files} JSON files.")
+
+    loads = []
+
+    for info in members:
+        # Sizes in the ZIP header can lie; read at most max_bytes + 1.
+        with archive.open(info) as member:
+            data = member.read(max_bytes + 1)
+
+        if len(data) > max_bytes:
+            raise ValueError(f"{info.filename} inside {origin} is too large.")
+
+        loads.append(load_gstr2b_bytes(data, f"{origin}/{info.filename}"))
+
+    return loads
 
 
 def load_gstr2b_bytes(content: bytes, filename: str) -> Gstr2bLoad:

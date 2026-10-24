@@ -42,14 +42,53 @@ python run_web.py
 
 Open **http://localhost:8080**:
 
-1. Upload the **purchase register** (CSV or Excel; common column names such as "GSTIN of Supplier" or "Invoice No." are recognised, and title rows above the header are skipped).
-2. Upload one or more **GSTR-2B JSON** files.
-3. See the **credit at risk**, the problems to fix, and a ready message per supplier with **Send on WhatsApp** / **Copy**.
-4. **Download the Excel report** for your CA.
+1. **Create an account** with a mobile number or email. Pick **Shopkeeper** (one shop, created at sign-up) or **CA** (add one business per client).
+2. Open the business and upload the **purchase register** (CSV or Excel; common column names such as "GSTIN of Supplier" or "Invoice No." are recognised, and title rows above the header are skipped) and one or more **GSTR-2B JSON** files. The ZIP the portal gives for large returns works too, and the upload screen explains how to download GSTR-2B.
+   **No billing software?** Under **Purchase bills**, type in each supplier bill as it arrives. GST is calculated from the rate, and typos are flagged before saving: GSTIN check digit, totals, unusual rates, IGST vs CGST/SGST for the supplier's state. Then run the check with "Include bills saved in the app" ticked, with no Excel needed. Saved bills and an uploaded register can be combined.
+3. See the **credit at risk**, the problems to fix, and a ready message per supplier with **Send on WhatsApp** / **Copy**. Mark each supplier as *sent*, *replied* or *fixed*.
+4. **Download the Excel report** for your CA, now or later from **Past checks**.
 
-**Try with sample data** runs the whole flow on fictional data, which is useful for demos. Uploaded files are processed in memory and never written to disk; reports stay downloadable for one hour.
+Each check is saved to the business. The next month's check shows the **credit recovered**: bills that were at risk before and are now in GSTR-2B. If a business has a GSTIN, uploads of GSTR-2B for a different GSTIN are refused, so a CA can't file one client's data under another.
 
-Set `HOST=0.0.0.0` to open it from other devices on your network, and `PORT` to change the port.
+**Try with sample data** runs the whole flow on fictional data without an account.
+
+**What is stored:** uploaded files are processed in memory and never written to disk. Check results and Excel reports are saved in a SQLite database (`data/gst_credit_finder.db`, git-ignored). Passwords are stored as scrypt hashes. Users can delete a check, a business, or their whole account from the site.
+
+| Setting | Default | |
+|---|---|---|
+| `HOST` | `127.0.0.1` | `0.0.0.0` to open it from other devices |
+| `PORT` | `8080` | |
+| `GST_DB` | `data/gst_credit_finder.db` | Database file |
+| `COOKIE_SECURE` | `0` | Set to `1` when served over HTTPS |
+| `RELOAD` | `1` | Set to `0` in production |
+| `APP_URL` | | Public address, used as the link in reminder messages |
+| `DAILY_JOBS` | `1` | Daily backup + monthly reminders inside the website; `0` if cron runs them |
+| `BACKUP_DIR` | `data/backups` | |
+| `BACKUP_KEEP` | `14` | Number of daily backups kept |
+
+### Messages: password reset codes and monthly reminders
+
+A login that's an email gets email, and a mobile number gets SMS. **With no provider set up, messages are printed in the server window**, so you can try password reset locally: the 6-digit code appears in the terminal.
+
+| Email (SMTP) | SMS (MSG91) |
+|---|---|
+| `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | `MSG91_AUTH_KEY`, `MSG91_OTP_TEMPLATE`, `MSG91_NUDGE_TEMPLATE` |
+
+Indian SMS needs DLT-registered templates. Register an OTP template with the variable `otp`, and a reminder template with `month`, `count` and `link`, then put their MSG91 template IDs in the settings above. Check the request format against MSG91's current Flow API docs before going live.
+
+**Monthly reminders:** GSTR-2B for a month is ready on the 14th of the next month. From then on, anyone with a business not yet checked for that month gets one message. Users can switch this off in Account settings. To send by hand: `python -m gst_credit_finder.nudges`.
+
+### Backups
+
+The website copies the database to `BACKUP_DIR` once a day and keeps the newest `BACKUP_KEEP` copies. To back up by hand: `python -m gst_credit_finder.backup`. A backup on the same disk won't survive that disk failing, so also copy `BACKUP_DIR` off the server regularly (for example to cloud storage).
+
+### GSTR-3B check
+
+On the results page, enter the ITC claimed in GSTR-3B Table 4A(5). The app compares it per tax head with the credit available in GSTR-2B for that month. Reverse-charge records and records marked "ITC not available" are excluded, and credit notes, imports and ISD aren't counted yet.
+
+### Privacy policy and terms
+
+`/privacy` and `/terms` are **templates**. Replace every `[bracketed]` item with your business details and have a lawyer review them before launch.
 
 ## Quick start: command line
 

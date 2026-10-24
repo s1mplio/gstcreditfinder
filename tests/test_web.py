@@ -21,6 +21,23 @@ def sample_data():
     subprocess.run([sys.executable, str(SAMPLE / "generate_sample.py")], check=True)
 
 
+def signed_in_client(login="9876500001"):
+    """A client logged in as a shopkeeper; returns (client, business_id)."""
+    session = TestClient(app)
+    response = session.post(
+        "/api/signup",
+        json={
+            "name": "Test Owner",
+            "login": login,
+            "password": "correct horse",
+            "role": "shop",
+            "business_name": "Test Store",
+        },
+    )
+    assert response.status_code == 200, response.text
+    return session, response.json()["businesses"][0]["id"]
+
+
 def gstr2b_files():
     return [
         ("gstr2b", (path.name, path.read_bytes(), "application/json"))
@@ -50,11 +67,12 @@ def test_demo_returns_results_and_downloadable_report():
 
 
 def test_upload_csv_register():
-    response = client.post(
+    session, business_id = signed_in_client("9876500001")
+    response = session.post(
         "/api/check",
         files=[("register", ("bills.csv", (SAMPLE / "purchase_register.csv").read_bytes(), "text/csv"))]
         + gstr2b_files(),
-        data={"buyer_name": "Test Store"},
+        data={"business_id": business_id},
     )
 
     assert response.status_code == 200, response.text
@@ -90,10 +108,12 @@ def test_upload_excel_register_with_title_row_and_other_column_names():
     buffer = io.BytesIO()
     workbook.save(buffer)
 
-    response = client.post(
+    session, business_id = signed_in_client("9876500002")
+    response = session.post(
         "/api/check",
         files=[("register", ("register.xlsx", buffer.getvalue(), "application/octet-stream"))]
         + gstr2b_files(),
+        data={"business_id": business_id},
     )
 
     assert response.status_code == 200, response.text
@@ -101,24 +121,28 @@ def test_upload_excel_register_with_title_row_and_other_column_names():
 
 
 def test_register_missing_columns_is_a_clear_error():
-    response = client.post(
+    session, business_id = signed_in_client("9876500003")
+    response = session.post(
         "/api/check",
         files=[("register", ("bills.csv", b"name,amount\nx,1\n", "text/csv"))] + gstr2b_files(),
+        data={"business_id": business_id},
     )
     assert response.status_code == 400
     assert "missing columns" in response.json()["detail"]
 
 
 def test_wrong_gstr2b_file_is_a_clear_error():
-    response = client.post(
+    session, business_id = signed_in_client("9876500004")
+    response = session.post(
         "/api/check",
         files=[
             ("register", ("bills.csv", (SAMPLE / "purchase_register.csv").read_bytes(), "text/csv")),
             ("gstr2b", ("gstr2b.pdf", b"%PDF-1.4 not json", "application/pdf")),
         ],
+        data={"business_id": business_id},
     )
     assert response.status_code == 400
-    assert "not a GSTR-2B JSON" in response.json()["detail"]
+    assert "PDF version" in response.json()["detail"]
 
 
 def test_expired_report_and_template():
