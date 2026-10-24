@@ -24,7 +24,7 @@ URGENT: 1 item(s) within 60 days of the claim deadline
   Sharma Traders: ST-0982 (₹7,650.00) deadline 30-11-2026, 38 days left
 ```
 
-*(Output from the bundled sample data. All businesses and GSTINs in it are fictional.)*
+*(Example output from the test data. All businesses and GSTINs in it are fictional.)*
 
 ---
 
@@ -36,7 +36,6 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-python sample_data\generate_sample.py   # demo data
 python run_web.py
 ```
 
@@ -49,8 +48,6 @@ Open **http://localhost:8080**:
 4. **Download the Excel report** for your CA, now or later from **Past checks**.
 
 Each check is saved to the business. The next month's check shows the **credit recovered**: bills that were at risk before and are now in GSTR-2B. If a business has a GSTIN, uploads of GSTR-2B for a different GSTIN are refused, so a CA can't file one client's data under another.
-
-**Try with sample data** runs the whole flow on fictional data without an account.
 
 **What is stored:** uploaded files are processed in memory and never written to disk. Check results and Excel reports are saved in a SQLite database (`data/gst_credit_finder.db`, git-ignored). Passwords are stored as scrypt hashes. Users can delete a check, a business, or their whole account from the site.
 
@@ -93,18 +90,18 @@ On the results page, enter the ITC claimed in GSTR-3B Table 4A(5). The app compa
 ## Quick start: command line
 
 ```powershell
-# Create the demo data, then run the check
-python sample_data\generate_sample.py
 python -m gst_credit_finder `
-    --register sample_data\purchase_register.csv `
-    --gstr2b sample_data\gstr2b_092026.json sample_data\gstr2b_102026.json `
+    --register purchase_register.xlsx `
+    --gstr2b gstr2b_092026.json gstr2b_102026.json `
     --buyer-name "Shree Ganesh Kirana Stores" `
     --out report.xlsx
 ```
 
 Open `report.xlsx`. It has four sheets: **Summary**, **Action needed**, **Supplier reminders** (ready-to-send messages) and **All invoices**.
 
-Run the tests:
+**Fictional files for trying it out:** `python tests\fixtures\generate_sample.py my_test_files` writes a purchase register and two GSTR-2B files (every business and GSTIN in them is made up) into `my_test_files\`. Upload them on the website or pass them to the command above.
+
+Run the tests (they generate the same files automatically):
 
 ```powershell
 python -m pytest -q
@@ -166,6 +163,11 @@ Matching is plain code with no AI and no guessing: the same inputs always give t
 
 ```text
 gst_credit_finder/
+├── accounts.py         # Users, businesses, saved checks, password reset (SQLite)
+├── bills.py            # Purchase bills typed into the app
+├── notify.py           # Email / SMS sending
+├── nudges.py           # Monthly "GSTR-2B is ready" reminders
+├── backup.py           # Daily database backup
 ├── gstin.py            # GSTIN format + check-digit validation
 ├── invoice_numbers.py  # Invoice number normalisation
 ├── register.py         # Purchase register CSV loader
@@ -175,11 +177,11 @@ gst_credit_finder/
 ├── report.py           # Summary, supplier reminders, Excel report
 ├── service.py          # One check, shared by website and command line
 ├── web.py              # Website (FastAPI)
-├── static/             # Web page: index.html, app.js, style.css
+├── static/             # Web pages: index.html, app.js, style.css, privacy, terms
 └── cli.py              # Command line
-sample_data/
-└── generate_sample.py  # Fictional demo data covering every situation
-tests/                  # 35 tests
+tests/                  # 87 tests
+└── fixtures/
+    └── generate_sample.py  # Fictional test data covering every situation
 run_web.py              # Starts the website
 ```
 
@@ -187,11 +189,11 @@ run_web.py              # Starts the website
 
 ## Roadmap
 
-1. **AI bill reading:** photograph or upload supplier bills, extract the register automatically, and flag anything unclear for review.
-2. **Accounts and saved history** for shopkeepers and CA firms.
-3. **Multi-client view for CAs:** credit at risk across all clients.
-4. **More GSTR-2B sections:** credit/debit notes, imports, ISD.
-5. **Invoice Management System (IMS)** accept/reject guidance.
+1. **Bill photos:** read a photographed supplier bill into the bill form (Claude vision), with the existing checks flagging anything unclear.
+2. **Import presets** for Tally, Vyapar and Busy exports.
+3. **More GSTR-2B sections:** credit/debit notes, imports, ISD.
+4. **Invoice Management System (IMS)** accept/reject guidance.
+5. **Hindi and Marathi**, supplier report cards, the 180-day payment rule.
 
 ---
 

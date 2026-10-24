@@ -1,6 +1,4 @@
 import io
-import subprocess
-import sys
 import zipfile
 from datetime import date
 from pathlib import Path
@@ -13,13 +11,8 @@ from gst_credit_finder import accounts, backup, notify, nudges
 from gst_credit_finder.web import app
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLE = ROOT / "sample_data"
+SAMPLE = ROOT / "tests" / "fixtures" / "data"
 PASSWORD = "correct horse"
-
-
-@pytest.fixture(scope="module", autouse=True)
-def sample_data():
-    subprocess.run([sys.executable, str(SAMPLE / "generate_sample.py")], check=True)
 
 
 @pytest.fixture(autouse=True)

@@ -1,9 +1,8 @@
 """Website: upload bills + GSTR-2B, see credit at risk, download the report.
 
 Uploaded files are processed in memory and never written to disk.
-Signed-in users' check results and Excel reports are saved to their
-account (see accounts.py); the public demo's reports are kept in
-memory briefly so they can be downloaded.
+Check results and Excel reports are saved to the user's account
+(see accounts.py).
 """
 
 import io
@@ -11,7 +10,6 @@ import logging
 import os
 import threading
 import time
-import uuid
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import date
@@ -27,21 +25,16 @@ from pydantic import BaseModel
 from . import __version__
 from . import accounts, backup, bills, notify, nudges
 from .accounts import AccountError
-from .gstr2b import load_gstr2b, load_gstr2b_upload
-from .register import RegisterLoad, load_register, load_register_bytes
+from .gstr2b import load_gstr2b_upload
+from .register import RegisterLoad, load_register_bytes
 from .report import write_excel
 from .service import CheckOutcome, outcome_to_dict, run_check
 
-ROOT = Path(__file__).resolve().parents[1]
 STATIC = Path(__file__).resolve().parent / "static"
-SAMPLE = ROOT / "sample_data"
 
 MAX_FILE_MB = 15
 MAX_GSTR2B_FILES = 13
 
-# Downloadable reports: id -> (created, bytes)
-REPORT_TTL_SECONDS = 60 * 60
-MAX_REPORTS = 200
 
 SESSION_COOKIE = "gcf_session"
 # Set COOKIE_SECURE=1 when the site is served over HTTPS.
@@ -96,9 +89,6 @@ async def lifespan(app):
 app = FastAPI(title="GST Credit Finder", version=__version__, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
-_reports = {}
-_reports_lock = threading.Lock()
-
 _failed_logins = defaultdict(deque)
 _failed_lock = threading.Lock()
 
@@ -130,28 +120,6 @@ def _excel(outcome: CheckOutcome) -> bytes:
     )
 
     return buffer.getvalue()
-
-
-def _store_report(outcome: CheckOutcome) -> str:
-    report_id = uuid.uuid4().hex
-    now = time.time()
-
-    with _reports_lock:
-        for key in [k for k, (created, _) in _reports.items() if now - created > REPORT_TTL_SECONDS]:
-            del _reports[key]
-
-        while len(_reports) >= MAX_REPORTS:
-            del _reports[next(iter(_reports))]
-
-        _reports[report_id] = (now, _excel(outcome))
-
-    return report_id
-
-
-def _respond(outcome: CheckOutcome) -> dict:
-    data = outcome_to_dict(outcome)
-    data["report_id"] = _store_report(outcome)
-    return data
 
 
 def _read(upload: UploadFile) -> bytes:
@@ -559,38 +527,6 @@ def check(
     check_id = accounts.save_check(business["id"], outcome_to_dict(outcome), _excel(outcome))
 
     return accounts.get_check(user["id"], check_id)
-
-
-@app.get("/api/demo")
-def demo():
-    """Run the check on the bundled fictional sample data."""
-    register_path = SAMPLE / "purchase_register.csv"
-
-    if not register_path.exists():
-        raise HTTPException(500, "Sample data missing; run sample_data/generate_sample.py")
-
-    outcome = run_check(
-        load_register(register_path),
-        [load_gstr2b(path) for path in sorted(SAMPLE.glob("gstr2b_*.json"))],
-        "Shree Ganesh Kirana Stores (demo)",
-    )
-
-    return _respond(outcome)
-
-
-@app.get("/api/report/{report_id}")
-def demo_report(report_id: str):
-    with _reports_lock:
-        entry = _reports.get(report_id)
-
-    if entry is None:
-        raise HTTPException(404, "Report expired. Run the check again to download it.")
-
-    return Response(
-        content=entry[1],
-        media_type=XLSX,
-        headers={"Content-Disposition": 'attachment; filename="gst_credit_report.xlsx"'},
-    )
 
 
 @app.get("/api/template")

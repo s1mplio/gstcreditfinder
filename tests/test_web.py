@@ -1,24 +1,19 @@
 import csv
 import io
-import subprocess
-import sys
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 from openpyxl import Workbook, load_workbook
 
 from gst_credit_finder.web import app
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLE = ROOT / "sample_data"
+SAMPLE = ROOT / "tests" / "fixtures" / "data"
+
+# Credit at risk in the generated test data (both GSTR-2B months).
+EXPECTED_AT_RISK = 39741.0
 
 client = TestClient(app)
-
-
-@pytest.fixture(scope="module", autouse=True)
-def sample_data():
-    subprocess.run([sys.executable, str(SAMPLE / "generate_sample.py")], check=True)
 
 
 def signed_in_client(login="9876500001"):
@@ -51,21 +46,6 @@ def test_home_page_and_assets():
     assert client.get("/static/style.css").status_code == 200
 
 
-def test_demo_returns_results_and_downloadable_report():
-    response = client.get("/api/demo")
-    assert response.status_code == 200
-    data = response.json()
-
-    assert data["total_at_risk"] > 0
-    assert {c["status"] for c in data["counts"]} >= {"matched", "missing_in_2b", "invalid_gstin"}
-    assert data["reminders"][0]["supplier_name"] == "Sharma Traders"
-    assert data["urgent"]
-
-    report = client.get(f"/api/report/{data['report_id']}")
-    assert report.status_code == 200
-    assert load_workbook(io.BytesIO(report.content)).sheetnames[0] == "Summary"
-
-
 def test_upload_csv_register():
     session, business_id = signed_in_client("9876500001")
     response = session.post(
@@ -78,7 +58,14 @@ def test_upload_csv_register():
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["buyer_name"] == "Test Store"
-    assert data["total_at_risk"] == client.get("/api/demo").json()["total_at_risk"]
+    assert data["total_at_risk"] == EXPECTED_AT_RISK
+    assert {c["status"] for c in data["counts"]} >= {"matched", "missing_in_2b", "invalid_gstin"}
+    assert data["reminders"][0]["supplier_name"] == "Sharma Traders"
+    assert data["urgent"]
+
+    report = session.get(f"/api/checks/{data['check_id']}/report")
+    assert report.status_code == 200
+    assert load_workbook(io.BytesIO(report.content)).sheetnames[0] == "Summary"
 
 
 def test_upload_excel_register_with_title_row_and_other_column_names():
@@ -117,7 +104,7 @@ def test_upload_excel_register_with_title_row_and_other_column_names():
     )
 
     assert response.status_code == 200, response.text
-    assert response.json()["total_at_risk"] == client.get("/api/demo").json()["total_at_risk"]
+    assert response.json()["total_at_risk"] == EXPECTED_AT_RISK
 
 
 def test_register_missing_columns_is_a_clear_error():
@@ -145,8 +132,9 @@ def test_wrong_gstr2b_file_is_a_clear_error():
     assert "PDF version" in response.json()["detail"]
 
 
-def test_expired_report_and_template():
-    assert client.get("/api/report/does-not-exist").status_code == 404
+def test_no_public_demo_and_template():
+    assert client.get("/api/demo").status_code == 404
+    assert client.get("/api/report/anything").status_code == 404
 
     template = client.get("/api/template")
     assert template.status_code == 200

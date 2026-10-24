@@ -1,6 +1,4 @@
 import json
-import subprocess
-import sys
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -11,12 +9,10 @@ from gst_credit_finder.cli import main
 from gst_credit_finder.gstr2b import load_gstr2b
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLE = ROOT / "sample_data"
+SAMPLE = ROOT / "tests" / "fixtures" / "data"
 
 
 def test_sample_demo_finds_every_situation(tmp_path, capsys):
-    subprocess.run([sys.executable, str(SAMPLE / "generate_sample.py")], check=True)
-
     out = tmp_path / "report.xlsx"
 
     code = main([

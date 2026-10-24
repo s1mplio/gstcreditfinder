@@ -1,6 +1,4 @@
 import json
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -10,14 +8,9 @@ from gst_credit_finder import accounts
 from gst_credit_finder.web import app
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLE = ROOT / "sample_data"
+SAMPLE = ROOT / "tests" / "fixtures" / "data"
 
 PASSWORD = "correct horse"
-
-
-@pytest.fixture(scope="module", autouse=True)
-def sample_data():
-    subprocess.run([sys.executable, str(SAMPLE / "generate_sample.py")], check=True)
 
 
 def signup(login, role="shop", **extra):

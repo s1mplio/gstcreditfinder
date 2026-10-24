@@ -1,6 +1,4 @@
 import csv
-import subprocess
-import sys
 from datetime import date
 from pathlib import Path
 
@@ -12,14 +10,9 @@ from gst_credit_finder.accounts import AccountError
 from gst_credit_finder.web import app
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLE = ROOT / "sample_data"
+SAMPLE = ROOT / "tests" / "fixtures" / "data"
 TODAY = date(2026, 10, 24)
 SHOP_GSTIN = "27ABKPG4821M1ZF"  # Maharashtra, like the sample shop
-
-
-@pytest.fixture(scope="module", autouse=True)
-def sample_data():
-    subprocess.run([sys.executable, str(SAMPLE / "generate_sample.py")], check=True)
 
 
 def good_bill(**changes):

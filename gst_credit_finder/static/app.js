@@ -1006,32 +1006,11 @@ async function openCheck(id) {
   }
 }
 
-// ---------------------------------------------------------
-// Demo
-// ---------------------------------------------------------
-
-async function runDemo() {
-  show("loading");
-
-  try {
-    render(await api("/api/demo"));
-  } catch (error) {
-    show(me ? "home" : "welcome");
-    alert(error.message);
-  }
-}
-
-for (const id of ["demo-button", "demo-top"]) {
-  $(id).addEventListener("click", runDemo);
-}
-
 $("new-check").addEventListener("click", () => {
-  if (current && current.check_id && business) {
+  if (business) {
     openBusiness(business.id);
-  } else if (me) {
-    goHome();
   } else {
-    show("welcome");
+    goHome();
   }
 });
 
@@ -1055,7 +1034,7 @@ function render(data) {
   $("result-title").textContent = data.buyer_name;
   $("result-meta").textContent = [
     data.buyer_gstin && `GSTIN ${data.buyer_gstin}`,
-    data.created ? `Checked ${formatTime(data.created)}` : "Sample data",
+    `Checked ${formatTime(data.created)}`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -1093,9 +1072,7 @@ function render(data) {
     })
   );
 
-  $("download").href = data.check_id
-    ? `/api/checks/${data.check_id}/report`
-    : `/api/report/${data.report_id}`;
+  $("download").href = `/api/checks/${data.check_id}/report`;
 
   renderRecovered(data);
   renderUrgent(data);
@@ -1414,10 +1391,7 @@ function renderReminders(data) {
     });
 
     actions.append(whatsapp, copy);
-    card.append(top, actions);
-
-    // Saved checks can track each supplier; the demo cannot.
-    if (data.check_id) card.append(reminderStatusPicker(reminder));
+    card.append(top, actions, reminderStatusPicker(reminder));
 
     container.append(card);
   }

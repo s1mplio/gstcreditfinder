@@ -1,10 +1,11 @@
-"""Generate realistic sample data for a demo.
+"""Generate fictional test data: a purchase register and two GSTR-2B files.
 
 All businesses, PANs and GSTINs are fictional (GSTINs carry a valid
-check digit). The data includes every situation the matcher handles,
-so the demo report shows real-looking problems and money at risk.
+check digit). The data includes every situation the matcher handles.
+The tests run this automatically; to get files for trying the app by
+hand, run it with a folder:
 
-    python sample_data/generate_sample.py
+    python tests/fixtures/generate_sample.py <folder>
 """
 
 import csv
@@ -15,11 +16,12 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from gst_credit_finder.gstin import with_check_character  # noqa: E402
 
-OUT = Path(__file__).resolve().parent
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent / "data"
+OUT.mkdir(parents=True, exist_ok=True)
 random.seed(2026)
 
 BUYER_NAME = "Shree Ganesh Kirana Stores"
