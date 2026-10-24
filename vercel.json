@@ -1,11 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }],
-  "functions": {
-    "api/index.py": {
-      "includeFiles": "gst_credit_finder/**",
-      "maxDuration": 30
-    }
-  },
   "crons": [{ "path": "/api/cron/daily", "schedule": "30 3 * * *" }]
 }

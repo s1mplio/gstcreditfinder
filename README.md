@@ -92,7 +92,7 @@ On the results page, enter the ITC claimed in GSTR-3B Table 4A(5). The app compa
 On Vercel the disk doesn't persist, so the app stores everything in **Postgres** whenever `DATABASE_URL` is set. Locally it keeps using the SQLite file.
 
 1. **Push the code to GitHub.**
-2. **Create the project:** on [vercel.com/new](https://vercel.com/new), import the repository. No build settings are needed: `vercel.json` routes every request to `api/index.py`.
+2. **Create the project:** on [vercel.com/new](https://vercel.com/new), import the repository. No build settings are needed: Vercel detects FastAPI and sends every request to `app.py`.
 3. **Add a database:** in the Vercel project, open **Storage → Create Database → Neon (Postgres)** and connect it to the project. This sets `DATABASE_URL` for you. The tables are created on the first request.
 4. **Set environment variables** (Project → Settings → Environment Variables):
 
