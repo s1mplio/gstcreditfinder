@@ -10,13 +10,12 @@ CGST = SGST, and the right tax type for the supplier's state. These
 come back as warnings; the user confirms to save anyway.
 """
 
-import sqlite3
 import time
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import List, Optional
 
-from . import accounts
+from . import accounts, db as database
 from .accounts import AccountError
 from .gstin import clean as clean_gstin
 from .gstin import validate as validate_gstin
@@ -144,12 +143,14 @@ def add(business: dict, data: dict, confirm: bool = False, today: Optional[date]
     key = normalize(bill["invoice_number"])
 
     with accounts.connect() as db:
-        count = db.execute("SELECT COUNT(*) FROM bills WHERE business_id = ?", (business["id"],)).fetchone()[0]
+        count = db.execute(
+            "SELECT COUNT(*) AS n FROM bills WHERE business_id = ?", (business["id"],)
+        ).fetchone()["n"]
         if count >= MAX_BILLS_PER_BUSINESS:
             raise AccountError("This business has too many saved bills.")
 
         try:
-            bill_id = db.execute(
+            bill_id = db.insert(
                 "INSERT INTO bills (business_id, supplier_gstin, supplier_name, invoice_number, invoice_key, "
                 "invoice_date, taxable_value, igst, cgst, sgst, cess, invoice_value, created) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -157,8 +158,8 @@ def add(business: dict, data: dict, confirm: bool = False, today: Optional[date]
                     business["id"], bill["supplier_gstin"], bill["supplier_name"], bill["invoice_number"], key,
                     bill["invoice_date"], *(bill[k] for k in AMOUNTS), time.time(),
                 ),
-            ).lastrowid
-        except sqlite3.IntegrityError:
+            )
+        except database.IntegrityError:
             raise AccountError(
                 f"Bill {bill['invoice_number']} from this supplier is already saved."
             )
@@ -180,12 +181,12 @@ def months(business_id: int) -> List[dict]:
     with accounts.connect() as db:
         rows = db.execute(
             "SELECT substr(invoice_date, 1, 7) AS month, COUNT(*) AS count, "
-            "SUM(CAST(igst AS REAL) + CAST(cgst AS REAL) + CAST(sgst AS REAL) + CAST(cess AS REAL)) AS gst "
+            "SUM(CAST(igst AS NUMERIC) + CAST(cgst AS NUMERIC) + CAST(sgst AS NUMERIC) + CAST(cess AS NUMERIC)) AS gst "
             "FROM bills WHERE business_id = ? GROUP BY month ORDER BY month DESC",
             (business_id,),
         ).fetchall()
 
-    return [{"month": r["month"], "count": r["count"], "gst": round(r["gst"], 2)} for r in rows]
+    return [{"month": r["month"], "count": r["count"], "gst": round(float(r["gst"]), 2)} for r in rows]
 
 
 def list_month(business_id: int, month: str) -> List[dict]:
@@ -205,7 +206,8 @@ def suppliers(business_id: int) -> List[dict]:
     """Suppliers seen before, to fill in names as the user types a GSTIN."""
     with accounts.connect() as db:
         rows = db.execute(
-            "SELECT supplier_gstin, supplier_name FROM bills WHERE business_id = ? AND supplier_name != '' "
+            "SELECT supplier_gstin, MAX(supplier_name) AS supplier_name FROM bills "
+            "WHERE business_id = ? AND supplier_name != '' "
             "GROUP BY supplier_gstin ORDER BY MAX(created) DESC",
             (business_id,),
         ).fetchall()

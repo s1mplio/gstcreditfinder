@@ -34,7 +34,7 @@ URGENT: 1 item(s) within 60 days of the claim deadline
 cd C:\GSTCreditFinder
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
 python run_web.py
 ```
@@ -86,6 +86,37 @@ On the results page, enter the ITC claimed in GSTR-3B Table 4A(5). The app compa
 ### Privacy policy and terms
 
 `/privacy` and `/terms` are **templates**. Replace every `[bracketed]` item with your business details and have a lawyer review them before launch.
+
+## Deploy to Vercel
+
+On Vercel the disk doesn't persist, so the app stores everything in **Postgres** whenever `DATABASE_URL` is set. Locally it keeps using the SQLite file.
+
+1. **Push the code to GitHub.**
+2. **Create the project:** on [vercel.com/new](https://vercel.com/new), import the repository. No build settings are needed: `vercel.json` routes every request to `api/index.py`.
+3. **Add a database:** in the Vercel project, open **Storage → Create Database → Neon (Postgres)** and connect it to the project. This sets `DATABASE_URL` for you. The tables are created on the first request.
+4. **Set environment variables** (Project → Settings → Environment Variables):
+
+   | Variable | Value |
+   |---|---|
+   | `CRON_SECRET` | A long random string. Vercel Cron sends it to `/api/cron/daily`, which runs the monthly GSTR-2B reminders every day at 09:00 IST |
+   | `APP_URL` | Your site's address, e.g. `https://gst-credit-finder.vercel.app` (used in reminder messages) |
+   | `SMTP_*` / `MSG91_*` | Optional: email/SMS for reset codes and reminders (see below). Without them, codes only appear in Vercel's function logs |
+
+5. **Redeploy** so the variables take effect.
+
+What changes on Vercel (set automatically from the `VERCEL` variable):
+
+- **Uploads are limited to 4 MB per check** (Vercel refuses requests over 4.5 MB). The page warns before sending. Override with `MAX_UPLOAD_MB`.
+- **Cookies are HTTPS-only**, and the daily jobs run through Vercel Cron instead of a background thread.
+- **Backups** come from the database provider (Neon keeps point-in-time history), not `backup.py`.
+
+To test against Postgres locally:
+
+```powershell
+docker run -d --rm --name gcf-test-pg -e POSTGRES_PASSWORD=test -p 5433:5432 postgres:16-alpine
+$env:TEST_DATABASE_URL = "postgresql://postgres:test@localhost:5433/postgres"
+python -m pytest -q
+```
 
 ## Quick start: command line
 

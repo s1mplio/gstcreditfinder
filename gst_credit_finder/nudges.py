@@ -106,7 +106,7 @@ def send_due(today: Optional[date] = None) -> int:
 
         with accounts.connect() as db:
             db.execute(
-                "INSERT OR IGNORE INTO nudges (user_id, period, sent) VALUES (?, ?, ?)",
+                "INSERT INTO nudges (user_id, period, sent) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
                 (person["user_id"], period, time.time()),
             )
         sent += 1

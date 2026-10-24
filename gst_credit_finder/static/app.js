@@ -729,6 +729,19 @@ $("upload-form").addEventListener("submit", async (event) => {
     return;
   }
 
+  // The host rejects large requests outright, so say so before sending.
+  const files = [...$("register").files, ...$("gstr2b").files];
+  const totalMb = files.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024);
+
+  if (totalMb > maxUploadMb) {
+    setError(
+      "form-error",
+      `These files add up to ${totalMb.toFixed(1)} MB; the limit is ${maxUploadMb} MB per check. ` +
+        "Upload fewer GSTR-2B months at a time, or use the ZIP from the GST portal."
+    );
+    return;
+  }
+
   const form = new FormData();
   if ($("register").files.length) form.append("register", $("register").files[0]);
 
@@ -1548,6 +1561,13 @@ function renderList() {
 // ---------------------------------------------------------
 
 syncRole();
+
+let maxUploadMb = 15;
+
+fetch("/api/config")
+  .then((response) => response.json())
+  .then((data) => (maxUploadMb = data.max_upload_mb))
+  .catch(() => {});
 
 fetch("/api/me")
   .then((response) => (response.ok ? response.json() : null))

@@ -10,6 +10,8 @@ from openpyxl import Workbook
 from gst_credit_finder import accounts, backup, notify, nudges
 from gst_credit_finder.web import app
 
+from conftest import POSTGRES, empty_database
+
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE = ROOT / "tests" / "fixtures" / "data"
 PASSWORD = "correct horse"
@@ -24,7 +26,7 @@ def no_real_messages(monkeypatch):
 
 @pytest.fixture
 def fresh_db(tmp_path, monkeypatch):
-    monkeypatch.setattr(accounts, "DB_PATH", tmp_path / "fresh.db")
+    empty_database(tmp_path, monkeypatch)
     monkeypatch.setenv("BACKUP_DIR", str(tmp_path / "backups"))
     return tmp_path
 
@@ -238,6 +240,7 @@ def test_settings_toggle_is_saved():
 # Backups + pages
 # ---------------------------------------------------------
 
+@pytest.mark.skipif(bool(POSTGRES), reason="Postgres backups are kept by the provider")
 def test_backup_copies_database_and_keeps_newest(fresh_db, monkeypatch):
     signup("9822200050")
     monkeypatch.setenv("BACKUP_KEEP", "2")

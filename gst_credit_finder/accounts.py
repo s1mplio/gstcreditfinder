@@ -1,4 +1,4 @@
-"""Accounts, businesses and saved checks (SQLite).
+"""Accounts, businesses and saved checks (see db.py for storage).
 
 One user owns one or more businesses: a shopkeeper usually has one,
 a CA has one per client. Each check run is saved against a business
@@ -11,21 +11,15 @@ Excel report are kept, and the owner can delete them at any time.
 import hashlib
 import hmac
 import json
-import os
 import re
 import secrets
-import sqlite3
-import threading
 import time
-from contextlib import contextmanager
-from pathlib import Path
 from typing import List, Optional
 
+from .db import connect
 from .gstin import clean as clean_gstin
 from .gstin import validate as validate_gstin
 from .invoice_numbers import normalize
-
-DB_PATH = Path(os.getenv("GST_DB", Path(__file__).resolve().parents[1] / "data" / "gst_credit_finder.db"))
 
 SESSION_DAYS = 30
 MAX_BUSINESSES = 500
@@ -33,131 +27,13 @@ MAX_BUSINESSES = 500
 REMINDER_STATUSES = ("pending", "sent", "replied", "fixed")
 ROLES = ("shop", "ca")
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    login TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role TEXT NOT NULL,
-    created REAL NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
-    token_hash TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    expires REAL NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS businesses (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    gstin TEXT NOT NULL DEFAULT '',
-    created REAL NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS checks (
-    id INTEGER PRIMARY KEY,
-    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-    created REAL NOT NULL,
-    period_text TEXT NOT NULL,
-    total_at_risk REAL NOT NULL,
-    claimable REAL NOT NULL,
-    recovered REAL NOT NULL DEFAULT 0,
-    result_json TEXT NOT NULL,
-    report BLOB NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS reminders (
-    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-    supplier_gstin TEXT NOT NULL,
-    status TEXT NOT NULL,
-    updated REAL NOT NULL,
-    PRIMARY KEY (business_id, supplier_gstin)
-);
-
-CREATE TABLE IF NOT EXISTS password_resets (
-    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    code_hash TEXT NOT NULL,
-    created REAL NOT NULL,
-    expires REAL NOT NULL,
-    attempts INTEGER NOT NULL DEFAULT 0
-);
-
--- Monthly "your GSTR-2B is ready" messages already sent.
-CREATE TABLE IF NOT EXISTS nudges (
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    period TEXT NOT NULL,
-    sent REAL NOT NULL,
-    PRIMARY KEY (user_id, period)
-);
-
--- Purchase bills entered in the app (amounts as exact decimal text).
-CREATE TABLE IF NOT EXISTS bills (
-    id INTEGER PRIMARY KEY,
-    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-    supplier_gstin TEXT NOT NULL,
-    supplier_name TEXT NOT NULL DEFAULT '',
-    invoice_number TEXT NOT NULL,
-    invoice_key TEXT NOT NULL,
-    invoice_date TEXT NOT NULL,
-    taxable_value TEXT NOT NULL,
-    igst TEXT NOT NULL,
-    cgst TEXT NOT NULL,
-    sgst TEXT NOT NULL,
-    cess TEXT NOT NULL,
-    invoice_value TEXT NOT NULL,
-    created REAL NOT NULL,
-    UNIQUE (business_id, supplier_gstin, invoice_key)
-);
-
-CREATE INDEX IF NOT EXISTS bills_by_month ON bills(business_id, invoice_date);
-CREATE INDEX IF NOT EXISTS checks_by_business ON checks(business_id, created);
-CREATE INDEX IF NOT EXISTS businesses_by_user ON businesses(user_id);
-"""
-
-# Columns added after the first release: (table, column, definition).
-MIGRATIONS = [
-    ("users", "notify", "INTEGER NOT NULL DEFAULT 1"),
-]
-
 RESET_CODE_MINUTES = 10
 RESET_RESEND_SECONDS = 60
 RESET_MAX_ATTEMPTS = 5
 
-_initialised = set()
-_init_lock = threading.Lock()
-
 
 class AccountError(ValueError):
     """A problem the user can fix (shown to them as-is)."""
-
-
-@contextmanager
-def connect():
-    path = Path(DB_PATH)
-
-    with _init_lock:
-        if path not in _initialised:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with sqlite3.connect(path) as db:
-                db.executescript(SCHEMA)
-                for table, column, definition in MIGRATIONS:
-                    existing = {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
-                    if column not in existing:
-                        db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-            _initialised.add(path)
-
-    db = sqlite3.connect(path, timeout=10)
-    db.row_factory = sqlite3.Row
-    db.execute("PRAGMA foreign_keys = ON")
-
-    try:
-        with db:
-            yield db
-    finally:
-        db.close()
 
 
 # =========================================================
@@ -245,10 +121,10 @@ def create_user(
             raise AccountError("An account with this mobile number or email already exists. Log in instead.")
 
         now = time.time()
-        user_id = db.execute(
+        user_id = db.insert(
             "INSERT INTO users (name, login, password_hash, role, created) VALUES (?, ?, ?, ?, ?)",
             (name, login, hash_password(password), role, now),
-        ).lastrowid
+        )
 
         if role == "shop":
             db.execute(
@@ -311,8 +187,9 @@ def start_password_reset(login: str):
 
         code = f"{secrets.randbelow(10 ** 6):06d}"
         db.execute(
-            "INSERT OR REPLACE INTO password_resets (user_id, code_hash, created, expires, attempts) "
-            "VALUES (?, ?, ?, ?, 0)",
+            "INSERT INTO password_resets (user_id, code_hash, created, expires, attempts) "
+            "VALUES (?, ?, ?, ?, 0) ON CONFLICT (user_id) DO UPDATE SET code_hash = excluded.code_hash, "
+            "created = excluded.created, expires = excluded.expires, attempts = 0",
             (user["id"], _code_hash(user["id"], code), now, now + RESET_CODE_MINUTES * 60),
         )
 
@@ -434,7 +311,7 @@ def create_business(user_id: int, name: str, gstin: str = "") -> int:
     gstin = _business_gstin(gstin)
 
     with connect() as db:
-        count = db.execute("SELECT COUNT(*) FROM businesses WHERE user_id = ?", (user_id,)).fetchone()[0]
+        count = db.execute("SELECT COUNT(*) AS n FROM businesses WHERE user_id = ?", (user_id,)).fetchone()["n"]
         if count >= MAX_BUSINESSES:
             raise AccountError(f"You can add at most {MAX_BUSINESSES} businesses.")
 
@@ -443,11 +320,10 @@ def create_business(user_id: int, name: str, gstin: str = "") -> int:
         ).fetchone():
             raise AccountError("You have already added a business with this GSTIN.")
 
-        cursor = db.execute(
+        return db.insert(
             "INSERT INTO businesses (user_id, name, gstin, created) VALUES (?, ?, ?, ?)",
             (user_id, name, gstin, time.time()),
         )
-        return cursor.lastrowid
 
 
 def list_businesses(user_id: int) -> List[dict]:
@@ -532,7 +408,7 @@ def save_check(business_id: int, data: dict, report: bytes) -> int:
 
         data["recovered"] = recovered_since(json.loads(row["result_json"]) if row else None, data)
 
-        cursor = db.execute(
+        return db.insert(
             "INSERT INTO checks (business_id, created, period_text, total_at_risk, claimable, "
             "recovered, result_json, report) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
@@ -546,7 +422,6 @@ def save_check(business_id: int, data: dict, report: bytes) -> int:
                 report,
             ),
         )
-        return cursor.lastrowid
 
 
 def list_checks(user_id: int, business_id: int) -> List[dict]:
@@ -622,3 +497,31 @@ def set_reminder_status(business_id: int, supplier_gstin: str, status: str):
             "updated = excluded.updated",
             (business_id, clean_gstin(supplier_gstin)[:15], status, time.time()),
         )
+
+
+# =========================================================
+# THROTTLING (failed logins, reset requests)
+# =========================================================
+
+def too_many_attempts(limits: dict, window_seconds: float) -> bool:
+    """True when any key has reached its limit within the window."""
+    cutoff = time.time() - window_seconds
+
+    with connect() as db:
+        for key, limit in limits.items():
+            count = db.execute(
+                "SELECT COUNT(*) AS n FROM attempts WHERE key = ? AND at > ?", (key, cutoff)
+            ).fetchone()["n"]
+            if count >= limit:
+                return True
+
+    return False
+
+
+def record_attempt(*keys: str, keep_seconds: float = 86400):
+    now = time.time()
+
+    with connect() as db:
+        db.execute("DELETE FROM attempts WHERE at < ?", (now - keep_seconds,))
+        for key in keys:
+            db.execute("INSERT INTO attempts (key, at) VALUES (?, ?)", (key, now))

@@ -10,7 +10,6 @@ import logging
 import os
 import threading
 import time
-from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
@@ -32,13 +31,18 @@ from .service import CheckOutcome, outcome_to_dict, run_check
 
 STATIC = Path(__file__).resolve().parent / "static"
 
-MAX_FILE_MB = 15
+# Running on Vercel (serverless): no lasting disk, no background thread,
+# HTTPS always, and a 4.5 MB limit on request size.
+ON_VERCEL = bool(os.getenv("VERCEL"))
+
+# Total upload size per check. Vercel rejects requests over 4.5 MB.
+MAX_FILE_MB = float(os.getenv("MAX_UPLOAD_MB", "4" if ON_VERCEL else "15"))
 MAX_GSTR2B_FILES = 13
 
 
 SESSION_COOKIE = "gcf_session"
 # Set COOKIE_SECURE=1 when the site is served over HTTPS.
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "0") == "1"
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "1" if ON_VERCEL else "0") == "1"
 
 # Failed logins allowed within the window, per account and per IP
 # address (higher, since a CA's office may share one IP).
@@ -51,7 +55,10 @@ RESET_REQUESTS_PER_IP = 10
 
 # Daily backup + monthly GSTR-2B reminders run inside the website
 # unless DAILY_JOBS=0 (e.g. when cron runs them instead).
-DAILY_JOBS = os.getenv("DAILY_JOBS", "1") == "1"
+DAILY_JOBS = os.getenv("DAILY_JOBS", "0" if ON_VERCEL else "1") == "1"
+
+# Vercel Cron calls /api/cron/daily with "Authorization: Bearer <CRON_SECRET>".
+CRON_SECRET = os.getenv("CRON_SECRET", "")
 
 log = logging.getLogger("gst_credit_finder.web")
 
@@ -89,9 +96,6 @@ async def lifespan(app):
 app = FastAPI(title="GST Credit Finder", version=__version__, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
-_failed_logins = defaultdict(deque)
-_failed_lock = threading.Lock()
-
 
 @app.middleware("http")
 async def same_origin_writes(request: Request, call_next):
@@ -123,10 +127,11 @@ def _excel(outcome: CheckOutcome) -> bytes:
 
 
 def _read(upload: UploadFile) -> bytes:
-    data = upload.file.read(MAX_FILE_MB * 1024 * 1024 + 1)
+    limit = int(MAX_FILE_MB * 1024 * 1024)
+    data = upload.file.read(limit + 1)
 
-    if len(data) > MAX_FILE_MB * 1024 * 1024:
-        raise HTTPException(413, f"{upload.filename} is larger than {MAX_FILE_MB} MB.")
+    if len(data) > limit:
+        raise HTTPException(413, f"{upload.filename} is larger than {MAX_FILE_MB:g} MB.")
 
     if not data:
         raise HTTPException(400, f"{upload.filename} is empty.")
@@ -156,24 +161,11 @@ def _business(user: dict, business_id: int) -> dict:
     return business
 
 
-def _too_many_failures(limits: dict) -> bool:
-    cutoff = time.time() - LOGIN_WINDOW_SECONDS
-
-    with _failed_lock:
-        for key, limit in limits.items():
-            attempts = _failed_logins[key]
-            while attempts and attempts[0] < cutoff:
-                attempts.popleft()
-            if len(attempts) >= limit:
-                return True
-
-    return False
-
-
-def _record_failure(*keys: str):
-    with _failed_lock:
-        for key in keys:
-            _failed_logins[key].append(time.time())
+def _client_ip(request: Request) -> str:
+    # Behind Vercel's proxy the visitor's address is in x-real-ip.
+    if ON_VERCEL and request.headers.get("x-real-ip"):
+        return request.headers["x-real-ip"]
+    return request.client.host if request.client else ""
 
 
 def _me(user_id: int) -> dict:
@@ -256,16 +248,17 @@ def signup(body: Signup):
 
 @app.post("/api/login")
 def login(body: Login, request: Request):
-    ip = f"ip:{request.client.host if request.client else ''}"
+    ip = f"ip:{_client_ip(request)}"
     login_key = f"login:{body.login.strip().lower()}"
+    limits = {ip: LOGIN_ATTEMPTS_PER_IP, login_key: LOGIN_ATTEMPTS_PER_ACCOUNT}
 
-    if _too_many_failures({ip: LOGIN_ATTEMPTS_PER_IP, login_key: LOGIN_ATTEMPTS_PER_ACCOUNT}):
+    if accounts.too_many_attempts(limits, LOGIN_WINDOW_SECONDS):
         raise HTTPException(429, "Too many wrong attempts. Wait 15 minutes and try again.")
 
     user_id = accounts.authenticate(body.login, body.password)
 
     if user_id is None:
-        _record_failure(ip, login_key)
+        accounts.record_attempt(ip, login_key)
         raise HTTPException(401, "Wrong mobile number / email or password.")
 
     return _signed_in(user_id)
@@ -279,12 +272,12 @@ def logout(request: Request):
 
 @app.post("/api/password/forgot")
 def forgot_password(body: ForgotPassword, request: Request):
-    ip = f"reset-ip:{request.client.host if request.client else ''}"
+    ip = f"reset-ip:{_client_ip(request)}"
 
-    if _too_many_failures({ip: RESET_REQUESTS_PER_IP}):
+    if accounts.too_many_attempts({ip: RESET_REQUESTS_PER_IP}, LOGIN_WINDOW_SECONDS):
         raise HTTPException(429, "Too many requests. Wait 15 minutes and try again.")
 
-    _record_failure(ip)
+    accounts.record_attempt(ip)
     started = accounts.start_password_reset(body.login)
 
     if started:
@@ -465,6 +458,22 @@ def health():
     return {"ok": True, "version": __version__}
 
 
+@app.get("/api/config")
+def config():
+    """Settings the page needs before uploading."""
+    return {"max_upload_mb": MAX_FILE_MB}
+
+
+@app.get("/api/cron/daily")
+def cron_daily(request: Request):
+    """Daily backup + monthly reminders, called by Vercel Cron."""
+    if not CRON_SECRET or request.headers.get("authorization") != f"Bearer {CRON_SECRET}":
+        raise HTTPException(401, "Not allowed.")
+
+    target = backup.run_backup()
+    return {"backup": str(target) if target else None, "reminders_sent": nudges.send_due()}
+
+
 @app.post("/api/check")
 def check(
     register_file: Optional[UploadFile] = File(
@@ -498,7 +507,7 @@ def check(
             load
             for f in gstr2b
             for load in load_gstr2b_upload(
-                _read(f), f.filename or "gstr2b.json", MAX_FILE_MB * 1024 * 1024, MAX_GSTR2B_FILES
+                _read(f), f.filename or "gstr2b.json", int(MAX_FILE_MB * 1024 * 1024), MAX_GSTR2B_FILES
             )
         ]
     except ValueError as error:
